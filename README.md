@@ -1,3 +1,13 @@
+# Goals of this fork:
+
+- update function performance optimization
+- fix drag, zoom, move during continuous update
+- type declarations
+- react & react-leaflet compatability
+
+Why? Because i need that stuff 
+
+
 # Leaflet.glify ![Leaflet.glify logo](logo.svg)
 
 web gl renderer plugin for leaflet in typescript
