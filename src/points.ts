@@ -1,3 +1,5 @@
+// points.ts
+
 import {
   Feature,
   FeatureCollection,
@@ -12,6 +14,8 @@ import { LeafletMouseEvent, Map, Point, LatLng } from "leaflet";
 import { IPixel } from "./pixel";
 import { locationDistance, pixelInCircle } from "./utils";
 import glify from "./index";
+
+import { MapMatrix } from "./map-matrix";
 
 export interface IPointsSettings extends IBaseGlLayerSettings {
   data: number[][] | FeatureCollection<GeoPoint>;
@@ -82,6 +86,14 @@ export class Points extends BaseGlLayer<IPointsSettings> {
 
   constructor(settings: Partial<IPointsSettings>) {
     super(settings);
+
+    // this.layer.eventEmitter.on("movestart", this.startCaching.bind(this));
+    // this.layer.eventEmitter.on("moveend", this.stopCaching.bind(this));
+    // this.layer.eventEmitter.on("zoomstart", this.startCaching.bind(this));
+    // this.layer.eventEmitter.on("zoomend", this.stopCaching.bind(this));
+    // this.layer.eventEmitter.on("dragstart", this.startCaching.bind(this));
+    // this.layer.eventEmitter.on("dragend", this.stopCaching.bind(this));
+
     this.settings = { ...defaults, ...settings };
 
     this.active = true;
@@ -105,6 +117,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
   }
 
   render(): this {
+    // console.log("RENDER CALL!");
     this.resetVertices();
 
     // look up the locations for the inputs to our shaders.
@@ -156,9 +169,8 @@ export class Points extends BaseGlLayer<IPointsSettings> {
       mapCenterPixels,
     } = this;
     const { eachVertex } = settings;
-    let colorFn:
-      | ((i: number, latLng: LatLng | any) => Color.IColor)
-      | null = null;
+    let colorFn: ((i: number, latLng: LatLng | any) => Color.IColor) | null =
+      null;
     let chosenColor: Color.IColor;
     let chosenSize: number;
     let sizeFn;
@@ -312,15 +324,48 @@ export class Points extends BaseGlLayer<IPointsSettings> {
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
-    const { gl, canvas, mapMatrix, matrix, map, allLatLngLookup, mapCenterPixels } = this;
+    const {
+      gl,
+      canvas,
+      mapMatrix,
+      map,
+      matrix,
+      allLatLngLookup,
+      mapCenterPixels,
+    } = this;
     const { offset } = e;
     const zoom = map.getZoom();
-    const scale = Math.pow(2, zoom);
-    // set base matrix to translate canvas pixel coordinates -> webgl coordinates
+
+    let center: IPixel;
+    let currentZoom: number;
+
+    let offsetValue: Point = offset;
+
+    if (
+      this._isDragging &&
+      this._dragStartCenter &&
+      this._dragStartZoom !== null &&
+      this._dragStartOffset !== null
+    ) {
+      console.log("DRAGGING!");
+      center = this._dragStartCenter;
+      currentZoom = this._dragStartZoom;
+      offsetValue = this._dragStartOffset;
+    } else {
+      console.log("NOT DRAGGING!");
+      center = mapCenterPixels;
+      currentZoom = zoom;
+      offsetValue = offset;
+    }
+    console.log("CENTER", center, "ZOOM", currentZoom, "OFFSET", offsetValue);
+
+    const scale = Math.pow(2, currentZoom);
+
+    // Apply the offset to the translation
     mapMatrix
       .setSize(canvas.width, canvas.height)
       .scaleTo(scale)
-      .translateTo(-offset.x + mapCenterPixels.x, -offset.y + mapCenterPixels.y);
+      .translateTo(-offsetValue.x + center.x, -offsetValue.y + center.y);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);

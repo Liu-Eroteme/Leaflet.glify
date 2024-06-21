@@ -1,3 +1,5 @@
+// File info: index.ts
+
 import { LeafletMouseEvent, Map } from "leaflet";
 
 import { Lines, ILinesSettings } from "./lines";

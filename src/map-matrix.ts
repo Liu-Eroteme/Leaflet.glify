@@ -1,3 +1,5 @@
+// File info: map-matrix.ts
+
 export class MapMatrix {
   array: Float32Array;
   constructor() {
