@@ -184,7 +184,6 @@ export abstract class BaseGlLayer<
   protected _context: ICanvasOverlayDrawEvent | null = null;
 
   protected startDragCaching(): void {
-    console.log("START DRAG CACHING");
     this._isDragging = true;
     this._dragStartCenter = this.mapCenterPixels;
     this._dragStartZoom = this.map.getZoom();
@@ -194,7 +193,6 @@ export abstract class BaseGlLayer<
   }
 
   protected stopDragCaching(): void {
-    console.log("STOP DRAG CACHING");
     this._isDragging = false;
     this._dragStartCenter = null;
     this._dragStartZoom = null;

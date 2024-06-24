@@ -117,7 +117,6 @@ export class Points extends BaseGlLayer<IPointsSettings> {
   }
 
   render(): this {
-    // console.log("RENDER CALL!");
     this.resetVertices();
 
     // look up the locations for the inputs to our shaders.
@@ -347,17 +346,14 @@ export class Points extends BaseGlLayer<IPointsSettings> {
       this._dragStartZoom !== null &&
       this._dragStartOffset !== null
     ) {
-      console.log("DRAGGING!");
       center = this._dragStartCenter;
       currentZoom = this._dragStartZoom;
       offsetValue = this._dragStartOffset;
     } else {
-      console.log("NOT DRAGGING!");
       center = mapCenterPixels;
       currentZoom = zoom;
       offsetValue = offset;
     }
-    console.log("CENTER", center, "ZOOM", currentZoom, "OFFSET", offsetValue);
 
     const scale = Math.pow(2, currentZoom);
 
