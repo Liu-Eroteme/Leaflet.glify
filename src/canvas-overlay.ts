@@ -205,67 +205,6 @@ export class CanvasOverlay extends Layer {
     this._map = map;
   }
 
-  // // Dear claude, what i changed starts here:
-  // _onDragStart(): void {
-  //   this._isDragging = true;
-  // }
-
-  // _onDrag(): void {
-  //   if (this.canvas) {
-  //     const topLeft = this._map.containerPointToLayerPoint([0, 0]);
-  //     DomUtil.setPosition(this.canvas, topLeft);
-  //   }
-  // }
-
-  // _onDragEnd(): void {
-  //   this._isDragging = false;
-  //   this._reset();
-  // }
-
-  // private _onMoveStart(): void {
-  //   // if (
-  //   //   this._userDrawFunc &&
-  //   //   typeof this._userDrawFunc === "object" &&
-  //   //   "startCaching" in this._userDrawFunc
-  //   // ) {
-  //   //   (this._userDrawFunc as unknown as BaseGlLayer).startCaching();
-  //   //   console.log("start caching");
-  //   // } else {
-  //   //   console.log("cannot start caching");
-  //   // }
-
-  //   try {
-  //     (this._userDrawFunc as unknown as BaseGlLayer).startCaching();
-  //     console.log("start caching");
-  //   } catch (e) {
-  //     console.log("cannot start caching");
-  //     console.log(e);
-  //   }
-  // }
-
-  // private _onMoveEnd(): void {
-  //   // if (
-  //   //   this._userDrawFunc &&
-  //   //   typeof this._userDrawFunc === "object" &&
-  //   //   "stopCaching" in this._userDrawFunc
-  //   // ) {
-  //   //   (this._userDrawFunc as unknown as BaseGlLayer).stopCaching();
-  //   //   console.log("stop caching");
-  //   // } else {
-  //   //   console.log("cannot stop caching");
-  //   // }
-
-  //   try {
-  //     (this._userDrawFunc as unknown as BaseGlLayer).stopCaching();
-  //     console.log("stop caching");
-  //   } catch (e) {
-  //     console.log("cannot stop caching");
-  //     console.log(e);
-  //   }
-
-  //   this._reset();
-  // }
-
   _resize(resizeEvent: ResizeEvent): void {
     // if (this.canvas && !this._isDragging) {
     if (this.canvas) {
