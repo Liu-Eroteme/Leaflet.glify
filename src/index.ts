@@ -7,7 +7,8 @@ import { Shapes, IShapesSettings } from "./shapes";
 import { IconPoints, IIconPointsSettings } from "./icon-points"; // Add this line
 import { debounce } from "./utils";
 
-import vertex from "./shader/vertex/default.glsl";
+import defaultShader from "./shader/vertex/default.glsl";
+import IPshader from "./shader/vertex/icon-points.glsl"; // Add this line
 import dot from "./shader/fragment/dot.glsl";
 import point from "./shader/fragment/point.glsl";
 import puck from "./shader/fragment/puck.glsl";
@@ -17,7 +18,10 @@ import polygon from "./shader/fragment/polygon.glsl";
 import iconPoints from "./shader/fragment/icon-points.glsl"; // Add this line
 
 const shader = {
-  vertex,
+  vertex: {
+    defaultShader,
+    IPshader,
+  },
   fragment: {
     dot,
     point,
@@ -74,7 +78,7 @@ export class Glify {
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
       vertexShaderSource: () => {
-        return this.shader.vertex;
+        return this.shader.vertex.defaultShader;
       },
       fragmentShaderSource: () => {
         return this.shader.fragment.point;
@@ -92,7 +96,7 @@ export class Glify {
       latitudeKey: this.latitudeKey,
       longitudeKey: this.longitudeKey,
       vertexShaderSource: () => {
-        return this.shader.vertex;
+        return this.shader.vertex.defaultShader;
       },
       fragmentShaderSource: () => {
         return this.shader.fragment.polygon;
@@ -110,7 +114,7 @@ export class Glify {
       latitudeKey: this.latitudeKey,
       longitudeKey: this.longitudeKey,
       vertexShaderSource: () => {
-        return this.shader.vertex;
+        return this.shader.vertex.defaultShader;
       },
       fragmentShaderSource: () => {
         return this.shader.fragment.polygon;
@@ -128,10 +132,10 @@ export class Glify {
       latitudeKey: this.latitudeKey,
       longitudeKey: this.longitudeKey,
       vertexShaderSource: () => {
-        return shader.vertex;
+        return this.shader.vertex.IPshader;
       },
       fragmentShaderSource: () => {
-        return shader.fragment.iconPoints;
+        return this.shader.fragment.iconPoints;
       },
       ...settings,
     });
