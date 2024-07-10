@@ -83,6 +83,9 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   active: boolean;
   texture: WebGLTexture | null = null;
 
+  textureWidth: number = 0;
+  textureHeight: number = 0;
+
   get size(): ((i: number, latLng: LatLng | null) => number) | number | null {
     if (typeof this.settings.size === "number") {
       return this.settings.size;
@@ -139,6 +142,10 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+        this.textureWidth = image.width;
+        this.textureHeight = image.height;
+
         resolve();
       };
       image.onerror = reject;
@@ -168,6 +175,18 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
     const uTexture = this.getUniformLocation("uTexture");
     gl.uniform1i(uTexture, 0);
+
+    const uTextureSizeLocation = gl.getUniformLocation(
+      this.program!,
+      "u_textureSize"
+    );
+    gl.uniform2f(uTextureSizeLocation, this.textureWidth, this.textureHeight);
+
+    const uOutlineThicknessLocation = gl.getUniformLocation(
+      this.program!,
+      "u_outlineThickness"
+    );
+    gl.uniform1f(uOutlineThicknessLocation, 5); // Adjust this value for desired thickness
 
     layer.redraw();
 
@@ -270,7 +289,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
 
         // texture coordinates
         iconAnchor![0],
-        iconAnchor![1] // You might want to adjust these based on iconAnchor
+        iconAnchor![1]
       );
 
       const vertex: IIconVertex = {
