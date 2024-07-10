@@ -269,8 +269,8 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
         chosenSize,
 
         // texture coordinates
-        0,
-        0 // You might want to adjust these based on iconAnchor
+        iconAnchor![0],
+        iconAnchor![1] // You might want to adjust these based on iconAnchor
       );
 
       const vertex: IIconVertex = {
