@@ -10,6 +10,9 @@ const float OUTLINE_INTENSITY = 0.99;
 const float OUTLINE_THRESHOLD = 0.01;
 const float EDGE_BLEND = 0.5; // Controls how much the outline blends at the edge
 
+const bool ENABLE_COLOR_REPLACE = false;
+const bool ENABLE_OUTLINE = false;
+
 vec4 sampleTexture(vec2 uv, vec2 offset) {
     vec2 sampleCoord = clamp(uv + offset, 0.0, 1.0);
     return texture2D(uTexture, sampleCoord);
@@ -26,46 +29,52 @@ void main() {
     vec4 color = centerColor;
     float alpha = centerColor.a;
     
-    // Sample neighboring pixels
-    color += sampleTexture(adjustedTexCoord, vec2(-offset, -offset));
-    color += sampleTexture(adjustedTexCoord, vec2(-offset, offset));
-    color += sampleTexture(adjustedTexCoord, vec2(offset, -offset));
-    color += sampleTexture(adjustedTexCoord, vec2(offset, offset));
+    if (ENABLE_OUTLINE) {
+        // Sample neighboring pixels
+        color += sampleTexture(adjustedTexCoord, vec2(-offset, -offset));
+        color += sampleTexture(adjustedTexCoord, vec2(-offset, offset));
+        color += sampleTexture(adjustedTexCoord, vec2(offset, -offset));
+        color += sampleTexture(adjustedTexCoord, vec2(offset, offset));
+        
+        // Average the samples
+        color /= 5.0;
+        
+        // Outline check
+        float outlineCheck = 0.0;
+        for (float i = -1.0; i <= 1.0; i += 1.0) {
+            for (float j = -1.0; j <= 1.0; j += 1.0) {
+                vec2 sampleCoord = adjustedTexCoord + vec2(i, j) * pixelSize * u_outlineThickness;
+                outlineCheck += sampleTexture(sampleCoord, vec2(0.0, 0.0)).a;
+            }
+        }
+        
+        // Normalize and adjust outline check
+        outlineCheck = outlineCheck / 9.0;
+        outlineCheck = smoothstep(OUTLINE_THRESHOLD, OUTLINE_THRESHOLD + FEATHER_RADIUS, outlineCheck);
+        
+        // Calculate outline strength with edge blending
+        float outlineStrength = outlineCheck * OUTLINE_INTENSITY;
+        float edgeBlend = smoothstep(0.0, EDGE_BLEND, alpha);
+        
+        // Blend outline with the texture
+        vec4 outlineColor = vec4(0.0, 0.0, 0.0, 1.0);
+        vec4 finalColor = mix(outlineColor, color, edgeBlend);
+        
+        // Apply outline only where needed
+        if (alpha < OUTLINE_THRESHOLD) {
+            finalColor = mix(vec4(0.0, 0.0, 0.0, outlineStrength), finalColor, edgeBlend);
+        }
+        
+        color = finalColor;
+    }
     
-    // Average the samples
-    color /= 5.0;
-    
-    // Outline check
-    float outlineCheck = 0.0;
-    for (float i = -1.0; i <= 1.0; i += 1.0) {
-        for (float j = -1.0; j <= 1.0; j += 1.0) {
-            vec2 sampleCoord = adjustedTexCoord + vec2(i, j) * pixelSize * u_outlineThickness;
-            outlineCheck += sampleTexture(sampleCoord, vec2(0.0, 0.0)).a;
+    if (ENABLE_COLOR_REPLACE) {
+        // Replace black pixels with the chosen color
+        float threshold = 0.01;
+        if (color.r < threshold && color.g < threshold && color.b < threshold && alpha > OUTLINE_THRESHOLD) {
+            color.rgb = _color.rgb;
         }
     }
     
-    // Normalize and adjust outline check
-    outlineCheck = outlineCheck / 9.0;
-    outlineCheck = smoothstep(OUTLINE_THRESHOLD, OUTLINE_THRESHOLD + FEATHER_RADIUS, outlineCheck);
-    
-    // Calculate outline strength with edge blending
-    float outlineStrength = outlineCheck * OUTLINE_INTENSITY;
-    float edgeBlend = smoothstep(0.0, EDGE_BLEND, alpha);
-    
-    // Blend outline with the texture
-    vec4 outlineColor = vec4(0.0, 0.0, 0.0, 1.0);
-    vec4 finalColor = mix(outlineColor, color, edgeBlend);
-    
-    // Apply outline only where needed
-    if (alpha < OUTLINE_THRESHOLD) {
-        finalColor = mix(vec4(0.0, 0.0, 0.0, outlineStrength), finalColor, edgeBlend);
-    }
-    
-    // Replace black pixels with the chosen color
-    float threshold = 0.01;
-    if (finalColor.r < threshold && finalColor.g < threshold && finalColor.b < threshold && alpha > OUTLINE_THRESHOLD) {
-        finalColor.rgb = _color.rgb;
-    }
-    
-    gl_FragColor = finalColor * _color;
+    gl_FragColor = color * _color;
 }

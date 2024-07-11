@@ -67,10 +67,13 @@ export interface IIconVertex {
   feature?: any;
 }
 
+// TODO this all feels kinda.. sketchy
+// rewrite?
+
 export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   static defaults = defaults;
   static maps: Map[] = [];
-  bytes = 9; // 2 for vertex, 4 for color, 1 for size, 2 for texture coordinates
+  bytes = 9; // 2 for vertex, 4 for color, 1 for size, 2 for texture coordinates.. ?
   latLngLookup: {
     [key: string]: IIconVertex[];
   } = {};
@@ -176,6 +179,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     const uTexture = this.getUniformLocation("uTexture");
     gl.uniform1i(uTexture, 0);
 
+    // TODO this is unsafe, need to check if the program is null
     const uTextureSizeLocation = gl.getUniformLocation(
       this.program!,
       "u_textureSize"
