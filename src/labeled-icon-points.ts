@@ -372,9 +372,9 @@ class LabeledIconPoints extends IconPoints {
     const data: number[] = [];
     const features = Array.isArray(this.settings.data)
       ? this.settings.data
-      : this.settings.data!.features || [];
+      : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
 
-    features.forEach((feature: ILabeledFeature | number[], index: number) => {
+    features.forEach((feature: Feature<GeoPoint, GeoJsonProperties> | number[], index: number) => {
       const text = this.getLabelText(feature);
       const offset = this.getLabelOffset(feature);
       const position = this.calculateLabelPosition(
@@ -429,24 +429,24 @@ class LabeledIconPoints extends IconPoints {
     return [point.x + offset[0], point.y + offset[1]];
   }
 
-  private getLabelText(feature: ILabeledFeature | number[]): string {
+  private getLabelText(feature: Feature<GeoPoint, GeoJsonProperties> | number[]): string {
     if (Array.isArray(feature)) {
       return this.labelSettings.labelText(feature);
     }
-    if (feature.properties && feature.properties.labelText) {
+    if (feature.properties && 'labelText' in feature.properties && typeof feature.properties.labelText === 'string') {
       return feature.properties.labelText;
     }
     return this.labelSettings.labelText(feature);
   }
 
   private getLabelOffset(
-    feature: ILabeledFeature | number[]
+    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
   ): [number, number] {
     if (Array.isArray(feature)) {
       return this.labelSettings.labelOffset;
     }
-    if (feature.properties && feature.properties.labelOffset) {
-      return feature.properties.labelOffset;
+    if (feature.properties && 'labelOffset' in feature.properties && Array.isArray(feature.properties.labelOffset)) {
+      return feature.properties.labelOffset as [number, number];
     }
     return this.labelSettings.labelOffset;
   }
