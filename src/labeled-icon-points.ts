@@ -374,7 +374,7 @@ class LabeledIconPoints extends IconPoints {
       ? this.settings.data
       : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
 
-    features.forEach((feature: Feature<GeoPoint, GeoJsonProperties> | number[], index: number) => {
+    features.forEach((feature, index) => {
       const text = this.getLabelText(feature);
       const offset = this.getLabelOffset(feature);
       const position = this.calculateLabelPosition(
@@ -408,6 +408,30 @@ class LabeledIconPoints extends IconPoints {
       new Float32Array(data),
       this.gl.DYNAMIC_DRAW
     );
+  }
+
+  private isFeature(feature: any): feature is Feature<GeoPoint, GeoJsonProperties> {
+    return typeof feature === 'object' && feature !== null && 'type' in feature && 'geometry' in feature;
+  }
+
+  private getLabelText(feature: Feature<GeoPoint, GeoJsonProperties> | number[]): string {
+    if (this.isFeature(feature)) {
+      if (feature.properties && 'labelText' in feature.properties && typeof feature.properties.labelText === 'string') {
+        return feature.properties.labelText;
+      }
+    }
+    return this.labelSettings.labelText(feature);
+  }
+
+  private getLabelOffset(
+    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
+  ): [number, number] {
+    if (this.isFeature(feature)) {
+      if (feature.properties && 'labelOffset' in feature.properties && Array.isArray(feature.properties.labelOffset)) {
+        return feature.properties.labelOffset as [number, number];
+      }
+    }
+    return this.labelSettings.labelOffset;
   }
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     super.drawOnCanvas(e);
