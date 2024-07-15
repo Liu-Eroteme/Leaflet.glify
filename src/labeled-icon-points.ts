@@ -1,7 +1,12 @@
 import { IconPoints, IIconPointsSettings, IIconVertex } from "./icon-points";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import { LatLng, Point } from "leaflet";
-import { Feature, FeatureCollection, Point as GeoPoint, GeoJsonProperties } from "geojson";
+import {
+  Feature,
+  FeatureCollection,
+  Point as GeoPoint,
+  GeoJsonProperties,
+} from "geojson";
 import { MapMatrix } from "./map-matrix";
 import * as Color from "./color";
 
@@ -10,7 +15,9 @@ interface ILabeledIconPointsSettings extends IIconPointsSettings {
   labelFont: string;
   labelColor: [number, number, number, number];
   labelBackgroundColor: [number, number, number, number];
-  labelText: (feature: Feature<GeoPoint, GeoJsonProperties> | number[]) => string;
+  labelText: (
+    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
+  ) => string;
 }
 
 interface ILabeledFeature extends Feature<GeoPoint> {
@@ -410,29 +417,17 @@ class LabeledIconPoints extends IconPoints {
     );
   }
 
-  private isFeature(feature: any): feature is Feature<GeoPoint, GeoJsonProperties> {
-    return typeof feature === 'object' && feature !== null && 'type' in feature && 'geometry' in feature;
+  private isFeature(
+    feature: any
+  ): feature is Feature<GeoPoint, GeoJsonProperties> {
+    return (
+      typeof feature === "object" &&
+      feature !== null &&
+      "type" in feature &&
+      "geometry" in feature
+    );
   }
 
-  private getLabelText(feature: Feature<GeoPoint, GeoJsonProperties> | number[]): string {
-    if (this.isFeature(feature)) {
-      if (feature.properties && 'labelText' in feature.properties && typeof feature.properties.labelText === 'string') {
-        return feature.properties.labelText;
-      }
-    }
-    return this.labelSettings.labelText(feature);
-  }
-
-  private getLabelOffset(
-    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
-  ): [number, number] {
-    if (this.isFeature(feature)) {
-      if (feature.properties && 'labelOffset' in feature.properties && Array.isArray(feature.properties.labelOffset)) {
-        return feature.properties.labelOffset as [number, number];
-      }
-    }
-    return this.labelSettings.labelOffset;
-  }
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     super.drawOnCanvas(e);
     this.updateLabelPositions(e);
@@ -453,11 +448,17 @@ class LabeledIconPoints extends IconPoints {
     return [point.x + offset[0], point.y + offset[1]];
   }
 
-  private getLabelText(feature: Feature<GeoPoint, GeoJsonProperties> | number[]): string {
+  private getLabelText(
+    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
+  ): string {
     if (Array.isArray(feature)) {
       return this.labelSettings.labelText(feature);
     }
-    if (feature.properties && 'labelText' in feature.properties && typeof feature.properties.labelText === 'string') {
+    if (
+      feature.properties &&
+      "labelText" in feature.properties &&
+      typeof feature.properties.labelText === "string"
+    ) {
       return feature.properties.labelText;
     }
     return this.labelSettings.labelText(feature);
@@ -469,7 +470,11 @@ class LabeledIconPoints extends IconPoints {
     if (Array.isArray(feature)) {
       return this.labelSettings.labelOffset;
     }
-    if (feature.properties && 'labelOffset' in feature.properties && Array.isArray(feature.properties.labelOffset)) {
+    if (
+      feature.properties &&
+      "labelOffset" in feature.properties &&
+      Array.isArray(feature.properties.labelOffset)
+    ) {
       return feature.properties.labelOffset as [number, number];
     }
     return this.labelSettings.labelOffset;
