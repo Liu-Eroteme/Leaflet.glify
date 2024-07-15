@@ -1,7 +1,7 @@
 import { IconPoints, IIconPointsSettings, IIconVertex } from "./icon-points";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import { LatLng, Point } from "leaflet";
-import { Feature, FeatureCollection, Point as GeoPoint } from "geojson";
+import { Feature, FeatureCollection, Point as GeoPoint, GeoJsonProperties } from "geojson";
 import { MapMatrix } from "./map-matrix";
 import * as Color from "./color";
 
@@ -10,14 +10,14 @@ interface ILabeledIconPointsSettings extends IIconPointsSettings {
   labelFont: string;
   labelColor: [number, number, number, number];
   labelBackgroundColor: [number, number, number, number];
-  labelText: (feature: any) => string;
+  labelText: (feature: Feature<GeoPoint, GeoJsonProperties> | number[]) => string;
 }
 
 interface ILabeledFeature extends Feature<GeoPoint> {
   properties: {
     labelText?: string;
     labelOffset?: [number, number];
-  };
+  } & GeoJsonProperties;
 }
 
 class LabeledIconPoints extends IconPoints {
