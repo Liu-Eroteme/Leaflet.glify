@@ -1,19 +1,20 @@
 precision mediump float;
-uniform vec4 backgroundColor;
-uniform vec2 labelSize;
-uniform float cornerRadius;
+
+varying vec2 vSize;
+varying float vCornerRadius;
+varying vec4 vColor;
 
 void main() {
-  vec2 coord = gl_FragCoord.xy;
-  vec2 center = labelSize * 0.5;
-  vec2 dist = abs(coord - center);
+  vec2 pixelPos = gl_FragCoord.xy - gl_FragCoord.w * gl_FragCoord.xy;
+  vec2 center = vSize * 0.5;
+  vec2 dist = abs(pixelPos - center);
   
-  if (dist.x > center.x - cornerRadius || dist.y > center.y - cornerRadius) {
-    float distToCorner = length(max(dist - center + cornerRadius, 0.0));
-    if (distToCorner > cornerRadius) {
+  if (dist.x > center.x - vCornerRadius || dist.y > center.y - vCornerRadius) {
+    float distToCorner = length(max(dist - center + vCornerRadius, 0.0));
+    if (distToCorner > vCornerRadius) {
       discard;
     }
   }
   
-  gl_FragColor = backgroundColor;
+  gl_FragColor = vColor;
 }

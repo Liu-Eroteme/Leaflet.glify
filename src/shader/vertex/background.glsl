@@ -1,9 +1,13 @@
-attribute vec2 position;
-uniform mat4 matrix;
-uniform vec2 labelSize;
-uniform vec2 offset;
+precision mediump float;
+
+varying vec2 vTexCoord;
+varying vec4 vColor;
+
+uniform sampler2D fontTexture;
+uniform float smoothing;
 
 void main() {
-  vec2 pos = position * labelSize + offset;
-  gl_Position = matrix * vec4(pos, 0.0, 1.0);
+  float distance = texture2D(fontTexture, vTexCoord).r;
+  float alpha = smoothstep(0.5 - smoothing, 0.5 + smoothing, distance);
+  gl_FragColor = vec4(vColor.rgb, vColor.a * alpha);
 }

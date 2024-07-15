@@ -1,12 +1,7 @@
 import { IconPoints, IIconPointsSettings, IIconVertex } from "./icon-points";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import { LatLng, Point } from "leaflet";
-import {
-  Feature,
-  FeatureCollection,
-  Point as GeoPoint,
-  GeoJsonProperties,
-} from "geojson";
+import { Feature, FeatureCollection, Point as GeoPoint } from "geojson";
 import { MapMatrix } from "./map-matrix";
 import * as Color from "./color";
 
@@ -15,18 +10,14 @@ interface ILabeledIconPointsSettings extends IIconPointsSettings {
   labelFont: string;
   labelColor: [number, number, number, number];
   labelBackgroundColor: [number, number, number, number];
-  labelText: (
-    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
-  ) => string;
-  labelBackgroundPadding: [number, number];
-  labelBackgroundCornerRadius: number;
+  labelText: (feature: any) => string;
 }
 
 interface ILabeledFeature extends Feature<GeoPoint> {
   properties: {
     labelText?: string;
     labelOffset?: [number, number];
-  } & GeoJsonProperties;
+  };
 }
 
 class LabeledIconPoints extends IconPoints {
@@ -38,7 +29,6 @@ class LabeledIconPoints extends IconPoints {
   private fontAtlas: any | null = null;
   private glyphQuad: WebGLBuffer | null = null;
   private labelInstanceData: WebGLBuffer | null = null;
-  private backgroundBuffer: WebGLBuffer | null = null;
   private labelSettings: ILabeledIconPointsSettings;
 
   constructor(settings: ILabeledIconPointsSettings) {
@@ -60,7 +50,7 @@ class LabeledIconPoints extends IconPoints {
   private async initializeLabelRendering() {
     await this.loadFontAtlas();
     await this.createShaders();
-    await this.createBuffers();
+    this.createBuffers();
   }
 
   private async loadFontAtlas() {
@@ -193,12 +183,6 @@ class LabeledIconPoints extends IconPoints {
       throw new Error("Failed to create label instance data buffer");
     }
     this.labelInstanceData = labelInstanceData;
-
-    const backgroundBuffer = this.gl.createBuffer();
-    if (!backgroundBuffer) {
-      throw new Error("Failed to create background buffer");
-    }
-    this.backgroundBuffer = backgroundBuffer;
   }
 
   render(): this {
@@ -262,58 +246,17 @@ class LabeledIconPoints extends IconPoints {
 
   private drawBackgrounds() {
     const { gl } = this;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.backgroundBuffer!);
+    const positionBuffer = this.getBuffer("backgroundPosition");
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
     const positionLocation = gl.getAttribLocation(
       this.backgroundShader!,
       "position"
     );
     gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 24, 0);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
-    const sizeLocation = gl.getAttribLocation(this.backgroundShader!, "size");
-    gl.enableVertexAttribArray(sizeLocation);
-    gl.vertexAttribPointer(sizeLocation, 2, gl.FLOAT, false, 24, 8);
-
-    const cornerRadiusLocation = gl.getAttribLocation(
-      this.backgroundShader!,
-      "cornerRadius"
-    );
-    gl.enableVertexAttribArray(cornerRadiusLocation);
-    gl.vertexAttribPointer(cornerRadiusLocation, 1, gl.FLOAT, false, 24, 16);
-
-    const colorLocation = gl.getAttribLocation(this.backgroundShader!, "color");
-    gl.enableVertexAttribArray(colorLocation);
-    gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 24, 20);
-
-    if (this.isWebGL2) {
-      const gl2 = gl as WebGL2RenderingContext;
-      gl2.vertexAttribDivisor(positionLocation, 1);
-      gl2.vertexAttribDivisor(sizeLocation, 1);
-      gl2.vertexAttribDivisor(cornerRadiusLocation, 1);
-      gl2.vertexAttribDivisor(colorLocation, 1);
-      gl2.drawArraysInstanced(
-        gl2.TRIANGLE_STRIP,
-        0,
-        4,
-        this.allLatLngLookup.length
-      );
-    } else {
-      const ext = gl.getExtension("ANGLE_instanced_arrays");
-      if (!ext) {
-        throw new Error("ANGLE_instanced_arrays extension not supported");
-      }
-      ext.vertexAttribDivisorANGLE(positionLocation, 1);
-      ext.vertexAttribDivisorANGLE(sizeLocation, 1);
-      ext.vertexAttribDivisorANGLE(cornerRadiusLocation, 1);
-      ext.vertexAttribDivisorANGLE(colorLocation, 1);
-      ext.drawArraysInstancedANGLE(
-        gl.TRIANGLE_STRIP,
-        0,
-        4,
-        this.allLatLngLookup.length
-      );
-    }
+    gl.drawArrays(gl.TRIANGLES, 0, this.allLatLngLookup.length * 6);
   }
 
   private setTextUniforms() {
@@ -415,26 +358,23 @@ class LabeledIconPoints extends IconPoints {
     let count = 0;
     const features = Array.isArray(this.settings.data)
       ? this.settings.data
-      : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
-    features.forEach((feature) => {
-      const text = this.getLabelText(
-        feature as Feature<GeoPoint, GeoJsonProperties> | number[]
-      );
+      : this.settings.data!.features || [];
+    features.forEach((feature: ILabeledFeature | number[]) => {
+      const text = this.getLabelText(feature);
       count += text.length;
     });
     return count;
   }
 
   private updateLabelInstanceData() {
-    if (!this.labelInstanceData || !this.backgroundBuffer) return;
+    if (!this.labelInstanceData) return;
 
-    const textData: number[] = [];
-    const backgroundData: number[] = [];
+    const data: number[] = [];
     const features = Array.isArray(this.settings.data)
       ? this.settings.data
-      : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
+      : this.settings.data!.features || [];
 
-    features.forEach((feature, index) => {
+    features.forEach((feature: ILabeledFeature | number[], index: number) => {
       const text = this.getLabelText(feature);
       const offset = this.getLabelOffset(feature);
       const position = this.calculateLabelPosition(
@@ -443,15 +383,12 @@ class LabeledIconPoints extends IconPoints {
       );
 
       let xOffset = 0;
-      let maxWidth = 0;
-      let maxHeight = 0;
-
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
         const charInfo = this.fontAtlas.chars[char];
         if (!charInfo) continue;
 
-        textData.push(
+        data.push(
           position[0] + xOffset,
           position[1], // position
           charInfo.x,
@@ -462,50 +399,16 @@ class LabeledIconPoints extends IconPoints {
         );
 
         xOffset += charInfo.width;
-        maxWidth = Math.max(maxWidth, xOffset);
-        maxHeight = Math.max(maxHeight, charInfo.height);
       }
-
-      // Add background data
-      const padding = this.labelSettings.labelBackgroundPadding;
-      const bgWidth = maxWidth + padding[0] * 2;
-      const bgHeight = maxHeight + padding[1] * 2;
-      backgroundData.push(
-        position[0] - padding[0],
-        position[1] - padding[1], // position
-        bgWidth,
-        bgHeight, // size
-        this.labelSettings.labelBackgroundCornerRadius, // corner radius
-        ...this.labelSettings.labelBackgroundColor // color
-      );
     });
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.labelInstanceData);
     this.gl.bufferData(
       this.gl.ARRAY_BUFFER,
-      new Float32Array(textData),
-      this.gl.DYNAMIC_DRAW
-    );
-
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.backgroundBuffer);
-    this.gl.bufferData(
-      this.gl.ARRAY_BUFFER,
-      new Float32Array(backgroundData),
+      new Float32Array(data),
       this.gl.DYNAMIC_DRAW
     );
   }
-
-  private isFeature(
-    feature: any
-  ): feature is Feature<GeoPoint, GeoJsonProperties> {
-    return (
-      typeof feature === "object" &&
-      feature !== null &&
-      "type" in feature &&
-      "geometry" in feature
-    );
-  }
-
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     super.drawOnCanvas(e);
     this.updateLabelPositions(e);
@@ -526,34 +429,24 @@ class LabeledIconPoints extends IconPoints {
     return [point.x + offset[0], point.y + offset[1]];
   }
 
-  private getLabelText(
-    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
-  ): string {
+  private getLabelText(feature: ILabeledFeature | number[]): string {
     if (Array.isArray(feature)) {
       return this.labelSettings.labelText(feature);
     }
-    if (
-      feature.properties &&
-      "labelText" in feature.properties &&
-      typeof feature.properties.labelText === "string"
-    ) {
+    if (feature.properties && feature.properties.labelText) {
       return feature.properties.labelText;
     }
     return this.labelSettings.labelText(feature);
   }
 
   private getLabelOffset(
-    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
+    feature: ILabeledFeature | number[]
   ): [number, number] {
     if (Array.isArray(feature)) {
       return this.labelSettings.labelOffset;
     }
-    if (
-      feature.properties &&
-      "labelOffset" in feature.properties &&
-      Array.isArray(feature.properties.labelOffset)
-    ) {
-      return feature.properties.labelOffset as [number, number];
+    if (feature.properties && feature.properties.labelOffset) {
+      return feature.properties.labelOffset;
     }
     return this.labelSettings.labelOffset;
   }
