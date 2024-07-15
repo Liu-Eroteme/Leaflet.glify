@@ -18,6 +18,8 @@ interface ILabeledIconPointsSettings extends IIconPointsSettings {
   labelText: (
     feature: Feature<GeoPoint, GeoJsonProperties> | number[]
   ) => string;
+  labelBackgroundPadding: [number, number];
+  labelBackgroundCornerRadius: number;
 }
 
 interface ILabeledFeature extends Feature<GeoPoint> {
@@ -36,6 +38,7 @@ class LabeledIconPoints extends IconPoints {
   private fontAtlas: any | null = null;
   private glyphQuad: WebGLBuffer | null = null;
   private labelInstanceData: WebGLBuffer | null = null;
+  private backgroundBuffer: WebGLBuffer | null = null;
   private labelSettings: ILabeledIconPointsSettings;
 
   constructor(settings: ILabeledIconPointsSettings) {
@@ -190,6 +193,12 @@ class LabeledIconPoints extends IconPoints {
       throw new Error("Failed to create label instance data buffer");
     }
     this.labelInstanceData = labelInstanceData;
+
+    const backgroundBuffer = this.gl.createBuffer();
+    if (!backgroundBuffer) {
+      throw new Error("Failed to create background buffer");
+    }
+    this.backgroundBuffer = backgroundBuffer;
   }
 
   render(): this {
@@ -253,17 +262,54 @@ class LabeledIconPoints extends IconPoints {
 
   private drawBackgrounds() {
     const { gl } = this;
-    const positionBuffer = this.getBuffer("backgroundPosition");
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.backgroundBuffer!);
 
     const positionLocation = gl.getAttribLocation(
       this.backgroundShader!,
       "position"
     );
     gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 24, 0);
 
-    gl.drawArrays(gl.TRIANGLES, 0, this.allLatLngLookup.length * 6);
+    const sizeLocation = gl.getAttribLocation(
+      this.backgroundShader!,
+      "size"
+    );
+    gl.enableVertexAttribArray(sizeLocation);
+    gl.vertexAttribPointer(sizeLocation, 2, gl.FLOAT, false, 24, 8);
+
+    const cornerRadiusLocation = gl.getAttribLocation(
+      this.backgroundShader!,
+      "cornerRadius"
+    );
+    gl.enableVertexAttribArray(cornerRadiusLocation);
+    gl.vertexAttribPointer(cornerRadiusLocation, 1, gl.FLOAT, false, 24, 16);
+
+    const colorLocation = gl.getAttribLocation(
+      this.backgroundShader!,
+      "color"
+    );
+    gl.enableVertexAttribArray(colorLocation);
+    gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 24, 20);
+
+    if (this.isWebGL2) {
+      const gl2 = gl as WebGL2RenderingContext;
+      gl2.vertexAttribDivisor(positionLocation, 1);
+      gl2.vertexAttribDivisor(sizeLocation, 1);
+      gl2.vertexAttribDivisor(cornerRadiusLocation, 1);
+      gl2.vertexAttribDivisor(colorLocation, 1);
+      gl2.drawArraysInstanced(gl2.TRIANGLE_STRIP, 0, 4, this.allLatLngLookup.length);
+    } else {
+      const ext = gl.getExtension("ANGLE_instanced_arrays");
+      if (!ext) {
+        throw new Error("ANGLE_instanced_arrays extension not supported");
+      }
+      ext.vertexAttribDivisorANGLE(positionLocation, 1);
+      ext.vertexAttribDivisorANGLE(sizeLocation, 1);
+      ext.vertexAttribDivisorANGLE(cornerRadiusLocation, 1);
+      ext.vertexAttribDivisorANGLE(colorLocation, 1);
+      ext.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, this.allLatLngLookup.length);
+    }
   }
 
   private setTextUniforms() {
@@ -374,9 +420,10 @@ class LabeledIconPoints extends IconPoints {
   }
 
   private updateLabelInstanceData() {
-    if (!this.labelInstanceData) return;
+    if (!this.labelInstanceData || !this.backgroundBuffer) return;
 
-    const data: number[] = [];
+    const textData: number[] = [];
+    const backgroundData: number[] = [];
     const features = Array.isArray(this.settings.data)
       ? this.settings.data
       : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
@@ -390,12 +437,15 @@ class LabeledIconPoints extends IconPoints {
       );
 
       let xOffset = 0;
+      let maxWidth = 0;
+      let maxHeight = 0;
+
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
         const charInfo = this.fontAtlas.chars[char];
         if (!charInfo) continue;
 
-        data.push(
+        textData.push(
           position[0] + xOffset,
           position[1], // position
           charInfo.x,
@@ -406,13 +456,35 @@ class LabeledIconPoints extends IconPoints {
         );
 
         xOffset += charInfo.width;
+        maxWidth = Math.max(maxWidth, xOffset);
+        maxHeight = Math.max(maxHeight, charInfo.height);
       }
+
+      // Add background data
+      const padding = this.labelSettings.labelBackgroundPadding;
+      const bgWidth = maxWidth + padding[0] * 2;
+      const bgHeight = maxHeight + padding[1] * 2;
+      backgroundData.push(
+        position[0] - padding[0],
+        position[1] - padding[1], // position
+        bgWidth,
+        bgHeight, // size
+        this.labelSettings.labelBackgroundCornerRadius, // corner radius
+        ...this.labelSettings.labelBackgroundColor // color
+      );
     });
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.labelInstanceData);
     this.gl.bufferData(
       this.gl.ARRAY_BUFFER,
-      new Float32Array(data),
+      new Float32Array(textData),
+      this.gl.DYNAMIC_DRAW
+    );
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.backgroundBuffer);
+    this.gl.bufferData(
+      this.gl.ARRAY_BUFFER,
+      new Float32Array(backgroundData),
       this.gl.DYNAMIC_DRAW
     );
   }
