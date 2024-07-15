@@ -365,9 +365,9 @@ class LabeledIconPoints extends IconPoints {
     let count = 0;
     const features = Array.isArray(this.settings.data)
       ? this.settings.data
-      : this.settings.data!.features || [];
-    features.forEach((feature: ILabeledFeature | number[]) => {
-      const text = this.getLabelText(feature);
+      : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
+    features.forEach((feature) => {
+      const text = this.getLabelText(feature as Feature<GeoPoint, GeoJsonProperties> | number[]);
       count += text.length;
     });
     return count;
