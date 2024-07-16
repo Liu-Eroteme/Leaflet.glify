@@ -1,36 +1,43 @@
 import { IconPoints, IIconPointsSettings, IIconVertex } from "./icon-points";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
-import { LatLng, Point } from "leaflet";
 import {
   Feature,
   FeatureCollection,
   Point as GeoPoint,
   GeoJsonProperties,
 } from "geojson";
-import { MapMatrix } from "./map-matrix";
-import * as Color from "./color";
+import { LeafletMouseEvent, Map, LatLng } from "leaflet";
 
 interface ILabeledIconPointsSettings extends IIconPointsSettings {
-  labelOffset: [number, number];
-  labelFont: string;
-  labelColor: [number, number, number, number];
-  labelBackgroundColor: [number, number, number, number];
-  labelText: (
+  labelOffset?: [number, number];
+  labelFont?: string;
+  labelColor?: [number, number, number, number];
+  labelBackgroundColor?: [number, number, number, number];
+  labelText?: (
     feature: Feature<GeoPoint, GeoJsonProperties> | number[]
   ) => string;
-  labelBackgroundPadding: [number, number];
-  labelBackgroundCornerRadius: number;
+  labelBackgroundPadding?: [number, number];
+  labelBackgroundCornerRadius?: number;
+  labelBackgroundVertexShaderSource: () => string;
+  labelBackgroundFragmentShaderSource: () => string;
+  labelTextVertexShaderSource: () => string;
+  labelTextFragmentShaderSource: () => string;
 }
 
+// TODO ?
 interface ILabeledFeature extends Feature<GeoPoint> {
   properties: {
     labelText?: string;
     labelOffset?: [number, number];
+    labelFont?: string;
+    labelColor?: [number, number, number, number];
+    labelBackgroundColor?: [number, number, number, number];
+    labelBackgroundPadding?: [number, number];
+    labelBackgroundCornerRadius?: number;
   } & GeoJsonProperties;
 }
 
 class LabeledIconPoints extends IconPoints {
-  gl: WebGLRenderingContext | WebGL2RenderingContext;
   private isWebGL2: boolean;
   private labelShader: WebGLProgram | null = null;
   private backgroundShader: WebGLProgram | null = null;
@@ -43,16 +50,19 @@ class LabeledIconPoints extends IconPoints {
 
   constructor(settings: ILabeledIconPointsSettings) {
     super(settings);
-    this.labelSettings = settings;
+    this.labelSettings = {
+      labelOffset: [0, 0],
+      labelFont: "12px Arial",
+      labelColor: [0, 0, 0, 1],
+      labelBackgroundColor: [255, 255, 255, 0.7],
+      labelText: () => "",
+      labelBackgroundPadding: [2, 2],
+      labelBackgroundCornerRadius: 3,
+      ...settings,
+    };
 
     // Check for WebGL2 support
-    const canvas = document.createElement("canvas");
-    this.gl = canvas.getContext("webgl2") || canvas.getContext("webgl")!;
-    this.isWebGL2 = !!canvas.getContext("webgl2");
-
-    if (!this.gl) {
-      throw new Error("WebGL not supported");
-    }
+    this.isWebGL2 = this.gl instanceof WebGL2RenderingContext;
 
     this.initializeLabelRendering();
   }
@@ -111,27 +121,13 @@ class LabeledIconPoints extends IconPoints {
   }
 
   private async createShaders() {
-    const loadShader = async (path: string) => {
-      const response = await fetch(path);
-      return response.text();
-    };
-
-    const backgroundVertexShader = await loadShader(
-      "./shader/vertex/background.glsl"
-    );
-    const backgroundFragmentShader = await loadShader(
-      "./shader/fragment/background.glsl"
-    );
-    const textVertexShader = await loadShader("./shader/vertex/text.glsl");
-    const textFragmentShader = await loadShader("./shader/fragment/text.glsl");
-
     this.backgroundShader = this.createShaderProgram(
-      backgroundVertexShader,
-      backgroundFragmentShader
+      this.labelSettings.labelBackgroundVertexShaderSource(),
+      this.labelSettings.labelBackgroundFragmentShaderSource()
     );
     this.labelShader = this.createShaderProgram(
-      textVertexShader,
-      textFragmentShader
+      this.labelSettings.labelTextVertexShaderSource(),
+      this.labelSettings.labelTextFragmentShaderSource()
     );
   }
 
@@ -202,8 +198,18 @@ class LabeledIconPoints extends IconPoints {
   }
 
   render(): this {
+    // Check if the current program is not the IconPoints program
+    if (this.gl.getParameter(this.gl.CURRENT_PROGRAM) !== this.program) {
+      // Switch to the IconPoints program
+      this.gl.useProgram(this.program);
+    }
+
+    // Now call the IconPoints render method
     super.render();
+
+    // Render the labels
     this.renderLabels();
+
     return this;
   }
 
@@ -213,7 +219,7 @@ class LabeledIconPoints extends IconPoints {
       return;
     }
 
-    const { gl, canvas, mapMatrix } = this;
+    const { gl } = this;
 
     // Render backgrounds
     gl.useProgram(this.backgroundShader);
@@ -238,9 +244,10 @@ class LabeledIconPoints extends IconPoints {
       this.backgroundShader!,
       "backgroundColor"
     );
+
     gl.uniform4fv(
       backgroundColorLocation,
-      this.labelSettings.labelBackgroundColor
+      this.labelSettings.labelBackgroundColor ?? [255, 255, 255, 0.7]
     );
 
     const labelSizeLocation = gl.getUniformLocation(
@@ -417,9 +424,7 @@ class LabeledIconPoints extends IconPoints {
       ? this.settings.data
       : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
     features.forEach((feature) => {
-      const text = this.getLabelText(
-        feature as Feature<GeoPoint, GeoJsonProperties> | number[]
-      );
+      const text = this.getLabelText(feature);
       count += text.length;
     });
     return count;
@@ -435,11 +440,23 @@ class LabeledIconPoints extends IconPoints {
       : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
 
     features.forEach((feature, index) => {
-      const text = this.getLabelText(feature);
-      const offset = this.getLabelOffset(feature);
+      const text = this.getLabelText(feature as ILabeledFeature | number[]);
+      const offset = this.getLabelOffset(feature as ILabeledFeature | number[]);
       const position = this.calculateLabelPosition(
         this.allLatLngLookup[index],
         offset
+      );
+      const labelColor = this.getLabelColor(
+        feature as ILabeledFeature | number[]
+      );
+      const backgroundColor = this.getLabelBackgroundColor(
+        feature as ILabeledFeature | number[]
+      );
+      const padding = this.getLabelBackgroundPadding(
+        feature as ILabeledFeature | number[]
+      );
+      const cornerRadius = this.getLabelBackgroundCornerRadius(
+        feature as ILabeledFeature | number[]
       );
 
       let xOffset = 0;
@@ -458,7 +475,7 @@ class LabeledIconPoints extends IconPoints {
           charInfo.y,
           charInfo.width,
           charInfo.height, // texture coordinates
-          ...this.labelSettings.labelColor // color
+          ...labelColor // color
         );
 
         xOffset += charInfo.width;
@@ -467,7 +484,6 @@ class LabeledIconPoints extends IconPoints {
       }
 
       // Add background data
-      const padding = this.labelSettings.labelBackgroundPadding;
       const bgWidth = maxWidth + padding[0] * 2;
       const bgHeight = maxHeight + padding[1] * 2;
       backgroundData.push(
@@ -475,8 +491,8 @@ class LabeledIconPoints extends IconPoints {
         position[1] - padding[1], // position
         bgWidth,
         bgHeight, // size
-        this.labelSettings.labelBackgroundCornerRadius, // corner radius
-        ...this.labelSettings.labelBackgroundColor // color
+        cornerRadius, // corner radius
+        ...backgroundColor // color
       );
     });
 
@@ -492,17 +508,6 @@ class LabeledIconPoints extends IconPoints {
       this.gl.ARRAY_BUFFER,
       new Float32Array(backgroundData),
       this.gl.DYNAMIC_DRAW
-    );
-  }
-
-  private isFeature(
-    feature: any
-  ): feature is Feature<GeoPoint, GeoJsonProperties> {
-    return (
-      typeof feature === "object" &&
-      feature !== null &&
-      "type" in feature &&
-      "geometry" in feature
     );
   }
 
@@ -527,35 +532,82 @@ class LabeledIconPoints extends IconPoints {
   }
 
   private getLabelText(
-    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
+    feature: Feature<GeoPoint, GeoJsonProperties> | ILabeledFeature | number[]
   ): string {
     if (Array.isArray(feature)) {
-      return this.labelSettings.labelText(feature);
+      return this.labelSettings.labelText?.(feature) ?? "";
     }
     if (
+      "properties" in feature &&
       feature.properties &&
-      "labelText" in feature.properties &&
-      typeof feature.properties.labelText === "string"
+      "labelText" in feature.properties
     ) {
-      return feature.properties.labelText;
+      return feature.properties.labelText ?? "";
     }
-    return this.labelSettings.labelText(feature);
+    if (this.labelSettings.labelText) {
+      return this.labelSettings.labelText(feature);
+    }
+    return "";
   }
 
   private getLabelOffset(
-    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
+    feature: ILabeledFeature | number[]
   ): [number, number] {
     if (Array.isArray(feature)) {
-      return this.labelSettings.labelOffset;
+      return this.labelSettings.labelOffset ?? [0, 0];
     }
-    if (
-      feature.properties &&
-      "labelOffset" in feature.properties &&
-      Array.isArray(feature.properties.labelOffset)
-    ) {
-      return feature.properties.labelOffset as [number, number];
+    if (feature.properties && feature.properties.labelOffset) {
+      return feature.properties.labelOffset;
     }
-    return this.labelSettings.labelOffset;
+    return this.labelSettings.labelOffset ?? [0, 0];
+  }
+
+  private getLabelColor(
+    feature: ILabeledFeature | number[]
+  ): [number, number, number, number] {
+    if (Array.isArray(feature)) {
+      return this.labelSettings.labelColor ?? [0, 0, 0, 1];
+    }
+    if (feature.properties && feature.properties.labelColor) {
+      return feature.properties.labelColor;
+    }
+    return this.labelSettings.labelColor ?? [0, 0, 0, 1];
+  }
+
+  private getLabelBackgroundColor(
+    feature: ILabeledFeature | number[]
+  ): [number, number, number, number] {
+    if (Array.isArray(feature)) {
+      return this.labelSettings.labelBackgroundColor ?? [255, 255, 255, 0.7];
+    }
+    if (feature.properties && feature.properties.labelBackgroundColor) {
+      return feature.properties.labelBackgroundColor;
+    }
+    return this.labelSettings.labelBackgroundColor ?? [255, 255, 255, 0.7];
+  }
+
+  private getLabelBackgroundPadding(
+    feature: ILabeledFeature | number[]
+  ): [number, number] {
+    if (Array.isArray(feature)) {
+      return this.labelSettings.labelBackgroundPadding ?? [2, 2];
+    }
+    if (feature.properties && feature.properties.labelBackgroundPadding) {
+      return feature.properties.labelBackgroundPadding;
+    }
+    return this.labelSettings.labelBackgroundPadding ?? [2, 2];
+  }
+
+  private getLabelBackgroundCornerRadius(
+    feature: ILabeledFeature | number[]
+  ): number {
+    if (Array.isArray(feature)) {
+      return this.labelSettings.labelBackgroundCornerRadius ?? 3;
+    }
+    if (feature.properties && feature.properties.labelBackgroundCornerRadius) {
+      return feature.properties.labelBackgroundCornerRadius;
+    }
+    return this.labelSettings.labelBackgroundCornerRadius ?? 3;
   }
 
   setData(data: FeatureCollection<GeoPoint> | number[][]): this {
@@ -567,6 +619,33 @@ class LabeledIconPoints extends IconPoints {
     super.resetVertices();
     this.updateLabelInstanceData();
     return this;
+  }
+
+  // Add these static methods
+  static tryClick(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: LabeledIconPoints[]
+  ): boolean | undefined {
+    // TODO implement ?
+    // TODO i dont know if i even implemented this in the base class
+    // I definitely haven't tested it yet or even gotten that far...
+    // Pls dont be too much work in the future :(
+    // INFO make sure the icon points function is working first, then just use super.tryClick() here
+    return undefined;
+  }
+
+  static tryHover(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: LabeledIconPoints[]
+  ): Array<boolean | undefined> {
+    // TODO implement ?
+    // TODO i dont know if i even implemented this in the base class
+    // I definitely haven't tested it yet or even gotten that far...
+    // Pls dont be too much work in the future :(
+    // INFO make sure the icon points function is working first, then just use super.tryHover() here
+    return [];
   }
 }
 
