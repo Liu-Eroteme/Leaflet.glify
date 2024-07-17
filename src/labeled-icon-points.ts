@@ -8,6 +8,9 @@ import {
 } from "geojson";
 import { LeafletMouseEvent, Map, LatLng } from "leaflet";
 
+import fontAtlasJson from "./resources/helvetica-msdf/Helvetica-msdf.json";
+import fontAtlasImageSrc from "./resources/helvetica-msdf/Helvetica.png";
+
 interface ILabeledIconPointsSettings extends IIconPointsSettings {
   labelOffset?: [number, number];
   labelFont?: string;
@@ -48,6 +51,9 @@ class LabeledIconPoints extends IconPoints {
   private backgroundBuffer: WebGLBuffer | null = null;
   private labelSettings: ILabeledIconPointsSettings;
 
+  private isInitialized: boolean = false;
+  private initPromise: Promise<void>;
+
   constructor(settings: ILabeledIconPointsSettings) {
     super(settings);
     this.labelSettings = {
@@ -64,60 +70,73 @@ class LabeledIconPoints extends IconPoints {
     // Check for WebGL2 support
     this.isWebGL2 = this.gl instanceof WebGL2RenderingContext;
 
-    this.initializeLabelRendering();
+    this.initPromise = this.initializeLabelRendering();
   }
 
-  private async initializeLabelRendering() {
-    await this.loadFontAtlas();
-    await this.createShaders();
-    await this.createBuffers();
-  }
-
-  private async loadFontAtlas() {
-    const response = await fetch(
-      "./resources/helvetica-msdf/Helvetica-msdf.json"
-    );
-    this.fontAtlas = await response.json();
-
-    const image = new Image();
-    image.src = "./resources/helvetica-msdf/Helvetica.png";
-    await new Promise((resolve) => (image.onload = resolve));
-
-    const texture = this.gl.createTexture();
-    if (!texture) {
-      throw new Error("Failed to create texture");
+  private async initializeLabelRendering(): Promise<void> {
+    try {
+      await this.loadFontAtlas();
+      await this.createShaders();
+      await this.createBuffers();
+      this.isInitialized = true;
+    } catch (error) {
+      console.error("Failed to initialize label rendering:", error);
     }
-    this.fontTexture = texture;
+  }
 
-    this.gl.bindTexture(this.gl.TEXTURE_2D, this.fontTexture);
-    this.gl.texImage2D(
-      this.gl.TEXTURE_2D,
-      0,
-      this.gl.RGBA,
-      this.gl.RGBA,
-      this.gl.UNSIGNED_BYTE,
-      image
-    );
-    this.gl.texParameteri(
-      this.gl.TEXTURE_2D,
-      this.gl.TEXTURE_WRAP_S,
-      this.gl.CLAMP_TO_EDGE
-    );
-    this.gl.texParameteri(
-      this.gl.TEXTURE_2D,
-      this.gl.TEXTURE_WRAP_T,
-      this.gl.CLAMP_TO_EDGE
-    );
-    this.gl.texParameteri(
-      this.gl.TEXTURE_2D,
-      this.gl.TEXTURE_MIN_FILTER,
-      this.gl.LINEAR
-    );
-    this.gl.texParameteri(
-      this.gl.TEXTURE_2D,
-      this.gl.TEXTURE_MAG_FILTER,
-      this.gl.LINEAR
-    );
+  private async loadFontAtlas(): Promise<void> {
+    this.fontAtlas = fontAtlasJson;
+
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        const texture = this.gl.createTexture();
+        if (!texture) {
+          reject(new Error("Failed to create texture"));
+          return;
+        }
+        this.fontTexture = texture;
+
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.fontTexture);
+        this.gl.texImage2D(
+          this.gl.TEXTURE_2D,
+          0,
+          this.gl.RGBA,
+          this.gl.RGBA,
+          this.gl.UNSIGNED_BYTE,
+          image
+        );
+        this.gl.texParameteri(
+          this.gl.TEXTURE_2D,
+          this.gl.TEXTURE_WRAP_S,
+          this.gl.CLAMP_TO_EDGE
+        );
+        this.gl.texParameteri(
+          this.gl.TEXTURE_2D,
+          this.gl.TEXTURE_WRAP_T,
+          this.gl.CLAMP_TO_EDGE
+        );
+        this.gl.texParameteri(
+          this.gl.TEXTURE_2D,
+          this.gl.TEXTURE_MIN_FILTER,
+          this.gl.LINEAR
+        );
+        this.gl.texParameteri(
+          this.gl.TEXTURE_2D,
+          this.gl.TEXTURE_MAG_FILTER,
+          this.gl.LINEAR
+        );
+
+        resolve();
+      };
+
+      image.onerror = () => {
+        reject(new Error("Failed to load font atlas image"));
+      };
+
+      // Set the source to the imported base64 image data
+      image.src = fontAtlasImageSrc;
+    });
   }
 
   private async createShaders() {
@@ -203,19 +222,38 @@ class LabeledIconPoints extends IconPoints {
       // Switch to the IconPoints program
       this.gl.useProgram(this.program);
     }
-
     // Now call the IconPoints render method
     super.render();
 
-    // Render the labels
-    this.renderLabels();
+    // // Render the labels
+    // this.renderLabels();
+
+    if (this.isInitialized) {
+      this.renderLabels();
+    } else {
+      this.initPromise.then(() => {
+        if (this.isInitialized) {
+          this.renderLabels();
+        }
+      });
+    }
 
     return this;
   }
 
+  // WARN this is what is breaking atm - find out why shadres and texture are not initialized
   private renderLabels() {
     if (!this.backgroundShader || !this.labelShader || !this.fontTexture) {
-      console.error("Shader programs or font texture not initialized");
+      console.log("shader or font issue:");
+      if (!this.backgroundShader) {
+        console.log("Shader program 'backgroundShader' not initialized");
+      }
+      if (!this.labelShader) {
+        console.log("Shader program 'labelShader' not initialized");
+      }
+      if (!this.fontTexture) {
+        console.log("Font texture not initialized");
+      }
       return;
     }
 

@@ -21,10 +21,10 @@ import square from "./shader/fragment/square.glsl";
 import polygon from "./shader/fragment/polygon.glsl";
 import iconPoints from "./shader/fragment/icon-points.glsl"; // Add this line
 
-import labelBackgroundVertex from "./shader/vertex/label-background.glsl";
-import labelBackgroundFragment from "./shader/fragment/label-background.glsl";
-import labelTextVertex from "./shader/vertex/label-text.glsl";
-import labelTextFragment from "./shader/fragment/label-text.glsl";
+import labelBackgroundVertex from "./shader/vertex/background.glsl";
+import labelBackgroundFragment from "./shader/fragment/background.glsl";
+import labelTextVertex from "./shader/vertex/text.glsl";
+import labelTextFragment from "./shader/fragment/text.glsl";
 
 const shader = {
   vertex: {
