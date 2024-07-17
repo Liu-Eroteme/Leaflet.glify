@@ -154,34 +154,74 @@ class LabeledIconPoints extends IconPoints {
     vertexSource: string,
     fragmentSource: string
   ): WebGLProgram {
+    console.log("Starting shader program creation");
+    
+    console.log("Creating vertex shader");
     const vertexShader = this.gl.createShader(this.gl.VERTEX_SHADER);
     if (!vertexShader) {
+      console.error("Failed to create vertex shader");
       throw new Error("Failed to create vertex shader");
     }
+    console.log("Vertex shader created successfully");
+
+    console.log("Setting vertex shader source");
     this.gl.shaderSource(vertexShader, vertexSource);
+    console.log("Compiling vertex shader");
     this.gl.compileShader(vertexShader);
 
+    console.log("Checking vertex shader compilation status");
+    if (!this.gl.getShaderParameter(vertexShader, this.gl.COMPILE_STATUS)) {
+      const info = this.gl.getShaderInfoLog(vertexShader);
+      console.error("Vertex shader compilation failed:", info);
+      throw new Error(`Vertex shader compilation failed: ${info}`);
+    }
+    console.log("Vertex shader compiled successfully");
+
+    console.log("Creating fragment shader");
     const fragmentShader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
     if (!fragmentShader) {
+      console.error("Failed to create fragment shader");
       throw new Error("Failed to create fragment shader");
     }
+    console.log("Fragment shader created successfully");
+
+    console.log("Setting fragment shader source");
     this.gl.shaderSource(fragmentShader, fragmentSource);
+    console.log("Compiling fragment shader");
     this.gl.compileShader(fragmentShader);
 
+    console.log("Checking fragment shader compilation status");
+    if (!this.gl.getShaderParameter(fragmentShader, this.gl.COMPILE_STATUS)) {
+      const info = this.gl.getShaderInfoLog(fragmentShader);
+      console.error("Fragment shader compilation failed:", info);
+      throw new Error(`Fragment shader compilation failed: ${info}`);
+    }
+    console.log("Fragment shader compiled successfully");
+
+    console.log("Creating shader program");
     const program = this.gl.createProgram();
     if (!program) {
+      console.error("Failed to create shader program");
       throw new Error("Failed to create shader program");
     }
+    console.log("Shader program created successfully");
+
+    console.log("Attaching shaders to program");
     this.gl.attachShader(program, vertexShader);
     this.gl.attachShader(program, fragmentShader);
+
+    console.log("Linking shader program");
     this.gl.linkProgram(program);
 
+    console.log("Checking shader program link status");
     if (!this.gl.getProgramParameter(program, this.gl.LINK_STATUS)) {
-      throw new Error(
-        `Failed to link shader program: ${this.gl.getProgramInfoLog(program)}`
-      );
+      const info = this.gl.getProgramInfoLog(program);
+      console.error("Shader program link failed:", info);
+      throw new Error(`Failed to link shader program: ${info}`);
     }
+    console.log("Shader program linked successfully");
 
+    console.log("Shader program creation completed");
     return program;
   }
 
