@@ -1,13 +1,17 @@
-precision mediump float;
+attribute vec2 position;
+attribute vec2 size;
+attribute float cornerRadius;
+attribute vec4 color;
 
-varying vec2 vTexCoord;
+uniform mat4 matrix;
+
+varying vec2 vSize;
+varying float vCornerRadius;
 varying vec4 vColor;
 
-uniform sampler2D fontTexture;
-uniform float smoothing;
-
 void main() {
-  float distance = texture2D(fontTexture, vTexCoord).r;
-  float alpha = smoothstep(0.5 - smoothing, 0.5 + smoothing, distance);
-  gl_FragColor = vec4(vColor.rgb, vColor.a * alpha);
+  gl_Position = matrix * vec4(position, 0.0, 1.0);
+  vSize = size;
+  vCornerRadius = cornerRadius;
+  vColor = color;
 }
