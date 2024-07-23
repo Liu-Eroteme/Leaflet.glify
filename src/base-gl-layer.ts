@@ -401,9 +401,6 @@ export abstract class BaseGlLayer<
     return this.render();
   }
 
-  // Dear claude, this is the update function i am talking about
-  // this function is what should cache the coorniate system at move start and revert to using the live one at move end
-  // I hope this makes sense.
   update(feature: any | any[], index: number): this {
     const featuresData = this.settings.data.features || this.settings.data;
 

@@ -89,6 +89,8 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   textureWidth: number = 0;
   textureHeight: number = 0;
 
+  private readyPromise: Promise<any>;
+
   get size(): ((i: number, latLng: LatLng | null) => number) | number | null {
     if (typeof this.settings.size === "number") {
       return this.settings.size;
@@ -121,9 +123,24 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
       console.warn("layer designed for SphericalMercator, alternate detected");
     }
 
-    this.loadTexture(this.settings.iconUrl!)
-      .then(() => this.setup().render())
+    this.readyPromise = this.loadTexture(this.settings.iconUrl!)
+      .then(() => {
+        console.log("Texture loaded successfully");
+        return this.setup();
+      })
+      .then(() => {
+        console.log("Setup completed successfully");
+        return this.render();
+      })
+      .then(() => {
+        console.log("Rendering completed successfully");
+      })
       .catch((error) => console.error("Failed to load texture:", error));
+  }
+
+  async ready(): Promise<void> {
+    // INFO small ready check func
+    await this.readyPromise;
   }
 
   async loadTexture(url: string): Promise<void> {
@@ -157,13 +174,30 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   }
 
   render(): this {
+    console.log("Rendering IconPoints");
+
+    const test = this.gl.getParameter(this.gl.CURRENT_PROGRAM);
+
+    if (test === this.program) {
+      console.log("Program is the same");
+    } else {
+      console.log("Program is different");
+    }
+
     this.resetVertices();
 
+    console.log("Vertices reset");
+
     const { gl, canvas, layer, vertices, mapMatrix } = this;
-    const matrix = (this.matrix = this.getUniformLocation("matrix"));
+    const matrix = (this.matrix = gl.getUniformLocation(
+      this.program!,
+      "matrix"
+    ));
     const verticesBuffer = this.getBuffer("vertices");
     const verticesTyped = (this.typedVertices = new Float32Array(vertices));
     const byteCount = verticesTyped.BYTES_PER_ELEMENT;
+
+    console.log("Got all the variables");
 
     mapMatrix.setSize(canvas.width, canvas.height);
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -171,13 +205,19 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, verticesTyped, gl.STATIC_DRAW);
 
+    console.log("Bound buffer data");
+
     this.attachShaderVariables(byteCount);
+
+    console.log("Attached shader variables");
 
     // Bind texture
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
-    const uTexture = this.getUniformLocation("uTexture");
+    const uTexture = gl.getUniformLocation(this.program!, "uTexture");
     gl.uniform1i(uTexture, 0);
+
+    console.log("Bound texture");
 
     // TODO this is unsafe, need to check if the program is null
     const uTextureSizeLocation = gl.getUniformLocation(
@@ -192,7 +232,11 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     );
     gl.uniform1f(uOutlineThicknessLocation, 5); // Adjust this value for desired thickness
 
+    console.log("Uniforms set");
+
     layer.redraw();
+
+    console.log("icon-points render complete");
 
     return this;
   }
@@ -210,10 +254,130 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     return this;
   }
 
+  // resetVertices(): this {
+  //   this.latLngLookup = {};
+  //   this.allLatLngLookup = [];
+  //   this.vertices = [];
+
+  //   const {
+  //     vertices,
+  //     settings,
+  //     map,
+  //     size,
+  //     latitudeKey,
+  //     longitudeKey,
+  //     color,
+  //     opacity,
+  //     data,
+  //     mapCenterPixels,
+  //   } = this;
+  //   const { eachVertex, iconSize, iconAnchor } = settings;
+  //   let colorFn: ((i: number, latLng: LatLng | any) => Color.IColor) | null =
+  //     null;
+  //   let chosenColor: Color.IColor;
+  //   let chosenSize: number;
+  //   let sizeFn: any;
+  //   let rawLatLng: [number, number] | Position;
+  //   let latLng: LatLng;
+  //   let pixel: Point;
+  //   let key;
+
+  //   if (!color) {
+  //     throw new Error("color is not properly defined");
+  //   } else if (typeof color === "function") {
+  //     colorFn = color as (i: number, latLng: LatLng) => Color.IColor;
+  //   }
+
+  //   if (!size) {
+  //     throw new Error("size is not properly defined");
+  //   } else if (typeof size === "function") {
+  //     sizeFn = size;
+  //   }
+
+  //   const processVertex = (i: number, feature: any) => {
+  //     rawLatLng =
+  //       this.dataFormat === "Array" ? data[i] : feature.geometry.coordinates;
+  //     key =
+  //       rawLatLng[latitudeKey].toFixed(2) +
+  //       "x" +
+  //       rawLatLng[longitudeKey].toFixed(2);
+  //     latLng = new LatLng(rawLatLng[latitudeKey], rawLatLng[longitudeKey]);
+  //     pixel = map.project(latLng, 0);
+
+  //     if (colorFn) {
+  //       chosenColor = colorFn(
+  //         i,
+  //         this.dataFormat === "Array" ? latLng : feature
+  //       );
+  //     } else {
+  //       chosenColor = color as Color.IColor;
+  //     }
+
+  //     chosenColor = { ...chosenColor, a: chosenColor.a ?? opacity ?? 0 };
+
+  //     if (sizeFn) {
+  //       chosenSize = sizeFn(i, latLng);
+  //     } else {
+  //       chosenSize = size as number;
+  //     }
+
+  //     vertices.push(
+  //       // vertex
+  //       pixel.x - mapCenterPixels.x,
+  //       pixel.y - mapCenterPixels.y,
+
+  //       // color
+  //       chosenColor.r,
+  //       chosenColor.g,
+  //       chosenColor.b,
+  //       chosenColor.a ?? 0,
+
+  //       // size
+  //       chosenSize,
+
+  //       // texture coordinates
+  //       iconAnchor![0],
+  //       iconAnchor![1]
+  //     );
+
+  //     const vertex: IIconVertex = {
+  //       latLng,
+  //       key,
+  //       pixel,
+  //       chosenColor,
+  //       chosenSize,
+  //       feature: this.dataFormat === "Array" ? rawLatLng : feature,
+  //     };
+  //     this.addLookup(vertex);
+  //     if (eachVertex) {
+  //       eachVertex(vertex);
+  //     }
+  //   };
+
+  //   if (this.dataFormat === "Array") {
+  //     const max = data.length;
+  //     for (let i = 0; i < max; i++) {
+  //       processVertex(i, null);
+  //     }
+  //   } else if (this.dataFormat === "GeoJson.FeatureCollection") {
+  //     const max = data.features.length;
+  //     for (let i = 0; i < max; i++) {
+  //       const feature = data.features[i] as Feature<GeoPoint>;
+  //       processVertex(i, feature);
+  //     }
+  //   }
+
+  //   return this;
+  // }
+
   resetVertices(): this {
+    console.log("Starting resetVertices");
+
     this.latLngLookup = {};
     this.allLatLngLookup = [];
     this.vertices = [];
+
+    console.log("Initialized lookups and vertices");
 
     const {
       vertices,
@@ -228,6 +392,17 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
       mapCenterPixels,
     } = this;
     const { eachVertex, iconSize, iconAnchor } = settings;
+
+    console.log("Destructured properties", {
+      latitudeKey,
+      longitudeKey,
+      color,
+      opacity,
+      iconSize,
+      iconAnchor,
+      mapCenterPixels,
+    });
+
     let colorFn: ((i: number, latLng: LatLng | any) => Color.IColor) | null =
       null;
     let chosenColor: Color.IColor;
@@ -238,43 +413,64 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     let pixel: Point;
     let key;
 
+    console.log("Declared local variables");
+
     if (!color) {
+      console.error("Color is not properly defined");
       throw new Error("color is not properly defined");
     } else if (typeof color === "function") {
       colorFn = color as (i: number, latLng: LatLng) => Color.IColor;
+      console.log("Color function assigned");
+    } else {
+      console.log("Using static color", color);
     }
 
     if (!size) {
+      console.error("Size is not properly defined");
       throw new Error("size is not properly defined");
     } else if (typeof size === "function") {
       sizeFn = size;
+      console.log("Size function assigned");
+    } else {
+      console.log("Using static size", size);
     }
 
     const processVertex = (i: number, feature: any) => {
+      console.log(`Processing vertex ${i}`, feature);
+
       rawLatLng =
         this.dataFormat === "Array" ? data[i] : feature.geometry.coordinates;
-      key =
-        rawLatLng[latitudeKey].toFixed(2) +
-        "x" +
-        rawLatLng[longitudeKey].toFixed(2);
+      console.log("Raw LatLng", rawLatLng);
+
+      key = `${rawLatLng[latitudeKey].toFixed(2)}x${rawLatLng[longitudeKey].toFixed(2)}`;
+      console.log("Generated key", key);
+
       latLng = new LatLng(rawLatLng[latitudeKey], rawLatLng[longitudeKey]);
+      console.log("Created LatLng object", latLng);
+
       pixel = map.project(latLng, 0);
+      console.log("Projected to pixel", pixel);
 
       if (colorFn) {
         chosenColor = colorFn(
           i,
           this.dataFormat === "Array" ? latLng : feature
         );
+        console.log("Color from function", chosenColor);
       } else {
         chosenColor = color as Color.IColor;
+        console.log("Static color", chosenColor);
       }
 
       chosenColor = { ...chosenColor, a: chosenColor.a ?? opacity ?? 0 };
+      console.log("Final chosen color", chosenColor);
 
       if (sizeFn) {
         chosenSize = sizeFn(i, latLng);
+        console.log("Size from function", chosenSize);
       } else {
         chosenSize = size as number;
+        console.log("Static size", chosenSize);
       }
 
       vertices.push(
@@ -296,6 +492,8 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
         iconAnchor![1]
       );
 
+      console.log("Pushed vertex data to vertices array");
+
       const vertex: IIconVertex = {
         latLng,
         key,
@@ -304,30 +502,66 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
         chosenSize,
         feature: this.dataFormat === "Array" ? rawLatLng : feature,
       };
+
+      console.log("Created vertex object", vertex);
+
       this.addLookup(vertex);
+      console.log("Added vertex to lookup");
+
       if (eachVertex) {
         eachVertex(vertex);
+        console.log("Called eachVertex function");
       }
     };
 
+    console.log("Defined processVertex function");
+
     if (this.dataFormat === "Array") {
+      console.log("Processing Array data");
       const max = data.length;
+      console.log(`Data length: ${max}`);
       for (let i = 0; i < max; i++) {
         processVertex(i, null);
       }
     } else if (this.dataFormat === "GeoJson.FeatureCollection") {
+      console.log("Processing GeoJson.FeatureCollection data");
       const max = data.features.length;
+      console.log(`Features length: ${max}`);
       for (let i = 0; i < max; i++) {
         const feature = data.features[i] as Feature<GeoPoint>;
         processVertex(i, feature);
       }
+    } else {
+      console.error("Unknown data format", this.dataFormat);
     }
+
+    console.log("Finished processing all vertices");
+    console.log("Final vertices array length", vertices.length);
+    console.log("Final allLatLngLookup length", this.allLatLngLookup.length);
 
     return this;
   }
 
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
+
+    // DEBUG
+    console.log("Drawing IconPoints on canvas");
+    console.log(
+      "checking if the correct program is still selected at this point in time"
+    );
+    const test = this.gl.getParameter(this.gl.CURRENT_PROGRAM);
+
+    if (test === this.program) {
+      console.log("Program is the same");
+    } else {
+      console.log("Program is different");
+      console.log("switching to correct program");
+      this.gl.useProgram(this.program);
+      // TODO fix
+    }
+    // INFO this got rid of the warnigns, but still not getting anything on the canvas
+    // DEBUG
 
     const {
       gl,
@@ -369,7 +603,18 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
+
+    console.log("IS THIS IT?");
+
+    // TEST
+    const testMatrix = (this.matrix = gl.getUniformLocation(
+      this.program!,
+      "matrix"
+    ));
+
+    gl.uniformMatrix4fv(testMatrix, false, mapMatrix.array);
+
+    // gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
     // Bind texture
     gl.activeTexture(gl.TEXTURE0);
@@ -377,7 +622,11 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     const uTexture = this.getUniformLocation("uTexture");
     gl.uniform1i(uTexture, 0);
 
+    console.log("IS THIS IT?");
+
     gl.drawArrays(gl.POINTS, 0, allLatLngLookup.length);
+
+    console.log("drawOnCanvas complete");
 
     return this;
   }
