@@ -604,8 +604,6 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
 
-    console.log("IS THIS IT?");
-
     // TEST
     const testMatrix = (this.matrix = gl.getUniformLocation(
       this.program!,
@@ -621,8 +619,6 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
     const uTexture = this.getUniformLocation("uTexture");
     gl.uniform1i(uTexture, 0);
-
-    console.log("IS THIS IT?");
 
     gl.drawArrays(gl.POINTS, 0, allLatLngLookup.length);
 

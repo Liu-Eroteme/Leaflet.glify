@@ -239,6 +239,8 @@ class LabeledIconPoints extends IconPoints {
   }
 
   private createBuffers() {
+    // WARN this is probably wrong too..
+    // too many coordinates?
     const glyphQuadVertices = new Float32Array([
       0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1,
     ]);
@@ -269,40 +271,64 @@ class LabeledIconPoints extends IconPoints {
     this.backgroundBuffer = backgroundBuffer;
   }
 
+  private async renderIcons(): Promise<void> {
+    await new Promise<void>((resolve) => {
+      this.gl.useProgram(this.program);
+      super.render();
+      this.layer.eventEmitter.on("drawend", () => resolve());
+    });
+  }
+
   render(): this {
     console.log("render call!");
     if (this.isInitialized) {
-      console.log("is initialized");
-      this.gl.useProgram(this.program);
-      console.log("main program used");
-      super.render();
-      console.log("super render called");
-      this.renderLabels();
-      console.log("label render called");
+      this.renderIcons()
+        .then(() => {
+          console.log("super render done");
+          this.renderLabels();
+          console.log("label render called");
+        })
+        .finally(() => {
+          console.log("render call done");
+        });
     }
-    // this kind of defered rendering is not working it seems
-    // promise resolves at some random point and then i get webgl errors
-    // just .. commenting it out seems to work?
-    // why did i write it in the first place?
-    // nobody knows
-    // else {
-    //   console.log("not initialized");
-    //   this.initPromise.then(() => {
-    //     console.log("init promise resolved");
-    //     if (this.isInitialized) {
-    //       console.log("is initialized");
-    //       this.gl.useProgram(this.program);
-    //       console.log("main program used");
-    //       super.render();
-    //       console.log("super render called");
-    //       this.renderLabels();
-    //       console.log("label render called");
-    //     }
-    //   });
-    // }
-    console.log("render call done");
     return this;
   }
+
+  // render(): this {
+  //   console.log("render call!");
+  //   if (this.isInitialized) {
+  //     console.log("is initialized");
+  //     this.gl.useProgram(this.program);
+  //     console.log("main program used");
+  //     super.render();
+  //     console.log("super render called");
+  //     this.renderLabels();
+  //     console.log("label render called");
+  //   }
+  //   // this kind of defered rendering is not working it seems
+  //   // promise resolves at some random point and then i get webgl errors
+  //   // just .. commenting it out seems to work?
+  //   // why did i write it in the first place?
+  //   // nobody knows
+  //   // else {
+  //   //   console.log("not initialized");
+  //   //   this.initPromise.then(() => {
+  //   //     console.log("init promise resolved");
+  //   //     if (this.isInitialized) {
+  //   //       console.log("is initialized");
+  //   //       this.gl.useProgram(this.program);
+  //   //       console.log("main program used");
+  //   //       super.render();
+  //   //       console.log("super render called");
+  //   //       this.renderLabels();
+  //   //       console.log("label render called");
+  //   //     }
+  //   //   });
+  //   // }
+  //   console.log("render call done");
+  //   return this;
+  // }
 
   private renderLabels() {
     if (!this.backgroundShader || !this.labelShader || !this.fontTexture) {
@@ -433,6 +459,10 @@ class LabeledIconPoints extends IconPoints {
     gl.enableVertexAttribArray(colorLocation);
     gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 24, 20);
 
+    // WARN stride is probably wrong
+    // (2+2+1+4)*4 = 36
+    // again, i dont trust my brain today but.. it should be 36
+
     if (this.isWebGL2) {
       const gl2 = gl as WebGL2RenderingContext;
       gl2.vertexAttribDivisor(positionLocation, 1);
@@ -552,6 +582,9 @@ class LabeledIconPoints extends IconPoints {
     gl.enableVertexAttribArray(texCoordLocation);
     gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 16, 8);
 
+    // INFO stride seems right here
+    // (2+2)*4 = 16
+
     gl.bindBuffer(gl.ARRAY_BUFFER, this.labelInstanceData!);
 
     const instancePositionLocation = gl.getAttribLocation(
@@ -574,6 +607,11 @@ class LabeledIconPoints extends IconPoints {
     );
     gl.enableVertexAttribArray(instanceColorLocation);
     gl.vertexAttribPointer(instanceColorLocation, 4, gl.FLOAT, false, 32, 24);
+
+    // WARN stride is probably wrong
+    // (2+4+4)*4 = 40
+    // so it should be 40..
+    // but i dont trust my brain today
 
     if (this.isWebGL2) {
       const gl2 = gl as WebGL2RenderingContext;
@@ -830,6 +868,8 @@ class LabeledIconPoints extends IconPoints {
     console.log("Finished updateLabelInstanceData");
   }
 
+  // TODO rethink this
+  // calling updateLabelInstanceData too many times per frame
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     super.drawOnCanvas(e);
     this.updateLabelPositions(e);

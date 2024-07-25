@@ -86,6 +86,11 @@ export class CanvasOverlay extends Layer {
     return this;
   }
 
+  // isDone(eventEmitter: EventEmitter): void {
+  //   eventEmitter.emit("drawend");
+  //   return;
+  // }
+
   isAnimated(): boolean {
     return Boolean(this._map.options.zoomAnimation && Browser.any3d);
   }
@@ -224,6 +229,7 @@ export class CanvasOverlay extends Layer {
   }
 
   _redraw(): void {
+    console.log("canvas-overlay.ts: _redraw");
     const { _map, canvas } = this;
     const size = _map.getSize();
     const bounds = _map.getBounds();
@@ -233,6 +239,7 @@ export class CanvasOverlay extends Layer {
     const topLeft = new LatLng(bounds.getNorth(), bounds.getWest());
     const offset = this._unclampedProject(topLeft, 0);
     if (canvas) {
+      console.log("canvas-overlay.ts: _userDrawFunc");
       this._userDrawFunc({
         bounds,
         canvas,
@@ -242,6 +249,8 @@ export class CanvasOverlay extends Layer {
         zoomScale,
         zoom,
       });
+      console.log("canvas-overlay.ts: emitting drawend");
+      this.eventEmitter.emit("drawend");
     }
 
     while (this._redrawCallbacks.length > 0) {
