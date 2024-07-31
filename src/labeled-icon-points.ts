@@ -247,8 +247,11 @@ class LabeledIconPoints extends IconPoints {
   }
 
   private createBuffers() {
+    // const glyphQuadVertices = new Float32Array([
+    //   0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1,
+    // ]);
     const glyphQuadVertices = new Float32Array([
-      0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1,
+      0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1,
     ]);
 
     const glyphQuad = this.gl.createBuffer();
@@ -394,15 +397,16 @@ class LabeledIconPoints extends IconPoints {
       "position"
     );
     gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 16, 0);
+    // gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 16, 0);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 8, 0);
 
-    // texCoord attribute
-    const texCoordLocation = gl.getAttribLocation(
-      this.labelShader!,
-      "texCoord"
-    );
-    gl.enableVertexAttribArray(texCoordLocation);
-    gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 16, 8);
+    // // texCoord attribute
+    // const texCoordLocation = gl.getAttribLocation(
+    //   this.labelShader!,
+    //   "texCoord"
+    // );
+    // gl.enableVertexAttribArray(texCoordLocation);
+    // gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 16, 8);
 
     // set up buffer
     console.log("Binding labelInstanceData buffer");
@@ -420,7 +424,8 @@ class LabeledIconPoints extends IconPoints {
       "instancePosition"
     );
     gl.enableVertexAttribArray(instancePositionLocation);
-    gl.vertexAttribPointer(instancePositionLocation, 2, gl.FLOAT, false, 44, 0);
+    // gl.vertexAttribPointer(instancePositionLocation, 2, gl.FLOAT, false, 44, 0);
+    gl.vertexAttribPointer(instancePositionLocation, 2, gl.FLOAT, false, 28, 0);
 
     // offset attribute
     const instanceOffsetLocation = gl.getAttribLocation(
@@ -428,7 +433,8 @@ class LabeledIconPoints extends IconPoints {
       "instanceOffset"
     );
     gl.enableVertexAttribArray(instanceOffsetLocation);
-    gl.vertexAttribPointer(instanceOffsetLocation, 1, gl.FLOAT, false, 44, 8);
+    // gl.vertexAttribPointer(instanceOffsetLocation, 1, gl.FLOAT, false, 44, 8);
+    gl.vertexAttribPointer(instanceOffsetLocation, 1, gl.FLOAT, false, 28, 8);
 
     // texCoord attribute
     const instanceTexCoordLocation = gl.getAttribLocation(
@@ -441,34 +447,37 @@ class LabeledIconPoints extends IconPoints {
       4,
       gl.FLOAT,
       false,
-      44,
+      28,
+      // 44,
       12
     );
 
-    // color attribute
-    const instanceColorLocation = gl.getAttribLocation(
-      this.labelShader!,
-      "instanceColor"
-    );
-    gl.enableVertexAttribArray(instanceColorLocation);
-    gl.vertexAttribPointer(instanceColorLocation, 4, gl.FLOAT, false, 44, 28);
+    // // color attribute
+    // const instanceColorLocation = gl.getAttribLocation(
+    //   this.labelShader!,
+    //   "instanceColor"
+    // );
+    // gl.enableVertexAttribArray(instanceColorLocation);
+    // gl.vertexAttribPointer(instanceColorLocation, 4, gl.FLOAT, false, 44, 28);
 
     // set up instanced rendering
     if (this.isWebGL2) {
       const gl2 = gl as WebGL2RenderingContext;
+      gl2.vertexAttribDivisor(positionLocation, 0);
       gl2.vertexAttribDivisor(instancePositionLocation, 1);
       gl2.vertexAttribDivisor(instanceOffsetLocation, 1);
       gl2.vertexAttribDivisor(instanceTexCoordLocation, 1);
-      gl2.vertexAttribDivisor(instanceColorLocation, 1);
+      // gl2.vertexAttribDivisor(instanceColorLocation, 1);
     } else {
       const ext = gl.getExtension("ANGLE_instanced_arrays");
       if (!ext) {
         throw new Error("ANGLE_instanced_arrays extension not supported");
       }
+      ext.vertexAttribDivisorANGLE(positionLocation, 0);
       ext.vertexAttribDivisorANGLE(instancePositionLocation, 1);
       ext.vertexAttribDivisorANGLE(instanceOffsetLocation, 1);
       ext.vertexAttribDivisorANGLE(instanceTexCoordLocation, 1);
-      ext.vertexAttribDivisorANGLE(instanceColorLocation, 1);
+      // ext.vertexAttribDivisorANGLE(instanceColorLocation, 1);
     }
 
     // set up uniforms
@@ -477,11 +486,11 @@ class LabeledIconPoints extends IconPoints {
     // WARN debug
     console.log("debug information:");
     console.log("positionLocation:", positionLocation);
-    console.log("texCoordLocation:", texCoordLocation);
+    // console.log("texCoordLocation:", texCoordLocation);
     console.log("instancePositionLocation:", instancePositionLocation);
     console.log("instanceOffsetLocation:", instanceOffsetLocation);
     console.log("instanceTexCoordLocation:", instanceTexCoordLocation);
-    console.log("instanceColorLocation:", instanceColorLocation);
+    // console.log("instanceColorLocation:", instanceColorLocation);
 
     try {
       const scaleLocation = gl.getUniformLocation(this.labelShader!, "uScale");
@@ -772,6 +781,7 @@ class LabeledIconPoints extends IconPoints {
 
         console.log("Char info:", charInfo);
 
+        // INFO add pixelOffset
         const charData = [
           // position is in leaflet coordinates at zoom level 0 shifted to use a central origin
           // cuz leaflet uses central origin - offsets are scaled to zoom 0 and applied in the shader
@@ -782,10 +792,10 @@ class LabeledIconPoints extends IconPoints {
           charInfo.y,
           charInfo.width,
           charInfo.height, // pixels, scaled in the shader
-          labelColor.r, // color
-          labelColor.g,
-          labelColor.b,
-          labelColor.a ?? 1,
+          // labelColor.r, // color
+          // labelColor.g,
+          // labelColor.b,
+          // labelColor.a ?? 1,
         ];
 
         // INFO breaks before here.. has to be color then
@@ -794,6 +804,7 @@ class LabeledIconPoints extends IconPoints {
         this.textData.push(...charData);
 
         xOffset += charInfo.width;
+        xOffset += 10; // INFO spacing between characters
         maxWidth = Math.max(maxWidth, xOffset);
         maxHeight = Math.max(maxHeight, charInfo.height);
       }
