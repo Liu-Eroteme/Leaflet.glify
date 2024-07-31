@@ -1,20 +1,40 @@
-precision mediump float;
+#version 300 es
+precision highp float;
+in vec4 vColor;
+in vec2 vPosition;
+in vec2 vSize;
+out vec4 fragColor;
+uniform float uCornerRadius;
+uniform float uOutlineThickness;
+uniform float uScale;
 
-varying vec2 vSize;
-varying float vCornerRadius;
-varying vec4 vColor;
+float roundedBoxSDF(vec2 centerPosition, vec2 size, float radius) {
+  return length(max(abs(centerPosition) - size + radius, 0.0)) - radius;
+}
 
 void main() {
-  vec2 pixelPos = gl_FragCoord.xy - gl_FragCoord.w * gl_FragCoord.xy;
-  vec2 center = vSize * 0.5;
-  vec2 dist = abs(pixelPos - center);
+  // Scale the position and size back to screen pixels
+  vec2 scaledPosition = vPosition * uScale;
+  vec2 scaledSize = vSize * uScale;
   
-  if (dist.x > center.x - vCornerRadius || dist.y > center.y - vCornerRadius) {
-    float distToCorner = length(max(dist - center + vCornerRadius, 0.0));
-    if (distToCorner > vCornerRadius) {
-      discard;
-    }
-  }
+  // Use the original (unscaled) corner radius and outline thickness
+  float scaledDistance = roundedBoxSDF(scaledPosition - scaledSize / 2.0, scaledSize / 2.0, uCornerRadius);
   
-  gl_FragColor = vColor;
+  // Convert the distance back to world units
+  float distance = scaledDistance / uScale ;
+  
+  float outerEdge = 0.0;
+  float innerEdge = -uOutlineThickness / uScale;
+  
+  // Adjust the smoothstep range based on the scale
+  float smoothRange = 0.5 / uScale;
+  float outerRegion = smoothstep(-smoothRange, smoothRange, distance - outerEdge);
+  float innerRegion = smoothstep(-smoothRange, smoothRange, distance - innerEdge);
+  
+  vec4 outlineColor = vec4(0.0, 0.0, 0.0, 1.0);
+  
+  vec4 color = mix(vColor, outlineColor, innerRegion);
+  color = mix(color, vec4(0.0, 0.0, 0.0, 0.0), outerRegion);
+  
+  fragColor = color;
 }

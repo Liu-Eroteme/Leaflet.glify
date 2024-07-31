@@ -226,7 +226,10 @@ export abstract class BaseGlLayer<
     if (this.className) {
       canvas.className += " " + this.className;
     }
-    this.gl = (canvas.getContext("webgl2", { preserveDrawingBuffer }) ??
+    this.gl = (canvas.getContext("webgl2", {
+      preserveDrawingBuffer,
+      antialias: true,
+    }) ??
       canvas.getContext("webgl", { preserveDrawingBuffer }) ??
       canvas.getContext("experimental-webgl", {
         preserveDrawingBuffer,

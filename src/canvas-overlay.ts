@@ -86,11 +86,6 @@ export class CanvasOverlay extends Layer {
     return this;
   }
 
-  // isDone(eventEmitter: EventEmitter): void {
-  //   eventEmitter.emit("drawend");
-  //   return;
-  // }
-
   isAnimated(): boolean {
     return Boolean(this._map.options.zoomAnimation && Browser.any3d);
   }
@@ -136,12 +131,12 @@ export class CanvasOverlay extends Layer {
     map.on("dragend", () => this.eventEmitter.emit("dragend"), this);
     map.on("zoomend", () => this.eventEmitter.emit("zoomend"), this);
 
-    map.on("movestart", () => console.log("test"), this);
-    map.on("dragstart", () => console.log("test"), this);
-    map.on("zoomstart", () => console.log("test"), this);
-    map.on("moveend", () => console.log("test"), this);
-    map.on("dragend", () => console.log("test"), this);
-    map.on("zoomend", () => console.log("test"), this);
+    // map.on("movestart", () => console.log("test"), this);
+    // map.on("dragstart", () => console.log("test"), this);
+    // map.on("zoomstart", () => console.log("test"), this);
+    // map.on("moveend", () => console.log("test"), this);
+    // map.on("dragend", () => console.log("test"), this);
+    // map.on("zoomend", () => console.log("test"), this);
 
     if (animated) {
       map.on(
@@ -229,7 +224,7 @@ export class CanvasOverlay extends Layer {
   }
 
   _redraw(): void {
-    console.log("canvas-overlay.ts: _redraw");
+    // console.log("canvas-overlay.ts: _redraw");
     const { _map, canvas } = this;
     const size = _map.getSize();
     const bounds = _map.getBounds();
@@ -239,7 +234,7 @@ export class CanvasOverlay extends Layer {
     const topLeft = new LatLng(bounds.getNorth(), bounds.getWest());
     const offset = this._unclampedProject(topLeft, 0);
     if (canvas) {
-      console.log("canvas-overlay.ts: _userDrawFunc");
+      // console.log("canvas-overlay.ts: _userDrawFunc");
       this._userDrawFunc({
         bounds,
         canvas,
@@ -249,8 +244,7 @@ export class CanvasOverlay extends Layer {
         zoomScale,
         zoom,
       });
-      console.log("canvas-overlay.ts: emitting drawend");
-      this.eventEmitter.emit("drawend");
+      // console.log("canvas-overlay.ts: emitting drawend");
     }
 
     while (this._redrawCallbacks.length > 0) {

@@ -149,6 +149,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
       image.onload = () => {
         const { gl } = this;
         this.texture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
         gl.texImage2D(
           gl.TEXTURE_2D,
@@ -173,70 +174,30 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     });
   }
 
-  render(): this {
-    console.log("Rendering IconPoints");
-
-    const test = this.gl.getParameter(this.gl.CURRENT_PROGRAM);
-
-    if (test === this.program) {
-      console.log("Program is the same");
-    } else {
-      console.log("Program is different");
-    }
+  render(noRedraw?: boolean): this {
+    console.log("Preparing to render IconPoints");
 
     this.resetVertices();
 
     console.log("Vertices reset");
 
-    const { gl, canvas, layer, vertices, mapMatrix } = this;
-    const matrix = (this.matrix = gl.getUniformLocation(
-      this.program!,
-      "matrix"
-    ));
-    const verticesBuffer = this.getBuffer("vertices");
-    const verticesTyped = (this.typedVertices = new Float32Array(vertices));
-    const byteCount = verticesTyped.BYTES_PER_ELEMENT;
-
-    console.log("Got all the variables");
+    const { canvas, layer, mapMatrix } = this;
 
     mapMatrix.setSize(canvas.width, canvas.height);
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
-    gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, verticesTyped, gl.STATIC_DRAW);
 
-    console.log("Bound buffer data");
+    // do not redraw if optional parameter noRedraw exists and is true
+    if (noRedraw) {
+      if (noRedraw === true) {
+        console.log("not redrawing yet");
+        console.log("icon-points render preparations complete");
+        return this;
+      }
+    }
 
-    this.attachShaderVariables(byteCount);
-
-    console.log("Attached shader variables");
-
-    // Bind texture
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.texture);
-    const uTexture = gl.getUniformLocation(this.program!, "uTexture");
-    gl.uniform1i(uTexture, 0);
-
-    console.log("Bound texture");
-
-    // TODO this is unsafe, need to check if the program is null
-    const uTextureSizeLocation = gl.getUniformLocation(
-      this.program!,
-      "u_textureSize"
-    );
-    gl.uniform2f(uTextureSizeLocation, this.textureWidth, this.textureHeight);
-
-    const uOutlineThicknessLocation = gl.getUniformLocation(
-      this.program!,
-      "u_outlineThickness"
-    );
-    gl.uniform1f(uOutlineThicknessLocation, 5); // Adjust this value for desired thickness
-
-    console.log("Uniforms set");
-
+    // noRedraw is not true, so we will redraw
     layer.redraw();
 
-    console.log("icon-points render complete");
+    console.log("icon-points render preparations complete");
 
     return this;
   }
@@ -253,122 +214,6 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     this.allLatLngLookup.push(lookup);
     return this;
   }
-
-  // resetVertices(): this {
-  //   this.latLngLookup = {};
-  //   this.allLatLngLookup = [];
-  //   this.vertices = [];
-
-  //   const {
-  //     vertices,
-  //     settings,
-  //     map,
-  //     size,
-  //     latitudeKey,
-  //     longitudeKey,
-  //     color,
-  //     opacity,
-  //     data,
-  //     mapCenterPixels,
-  //   } = this;
-  //   const { eachVertex, iconSize, iconAnchor } = settings;
-  //   let colorFn: ((i: number, latLng: LatLng | any) => Color.IColor) | null =
-  //     null;
-  //   let chosenColor: Color.IColor;
-  //   let chosenSize: number;
-  //   let sizeFn: any;
-  //   let rawLatLng: [number, number] | Position;
-  //   let latLng: LatLng;
-  //   let pixel: Point;
-  //   let key;
-
-  //   if (!color) {
-  //     throw new Error("color is not properly defined");
-  //   } else if (typeof color === "function") {
-  //     colorFn = color as (i: number, latLng: LatLng) => Color.IColor;
-  //   }
-
-  //   if (!size) {
-  //     throw new Error("size is not properly defined");
-  //   } else if (typeof size === "function") {
-  //     sizeFn = size;
-  //   }
-
-  //   const processVertex = (i: number, feature: any) => {
-  //     rawLatLng =
-  //       this.dataFormat === "Array" ? data[i] : feature.geometry.coordinates;
-  //     key =
-  //       rawLatLng[latitudeKey].toFixed(2) +
-  //       "x" +
-  //       rawLatLng[longitudeKey].toFixed(2);
-  //     latLng = new LatLng(rawLatLng[latitudeKey], rawLatLng[longitudeKey]);
-  //     pixel = map.project(latLng, 0);
-
-  //     if (colorFn) {
-  //       chosenColor = colorFn(
-  //         i,
-  //         this.dataFormat === "Array" ? latLng : feature
-  //       );
-  //     } else {
-  //       chosenColor = color as Color.IColor;
-  //     }
-
-  //     chosenColor = { ...chosenColor, a: chosenColor.a ?? opacity ?? 0 };
-
-  //     if (sizeFn) {
-  //       chosenSize = sizeFn(i, latLng);
-  //     } else {
-  //       chosenSize = size as number;
-  //     }
-
-  //     vertices.push(
-  //       // vertex
-  //       pixel.x - mapCenterPixels.x,
-  //       pixel.y - mapCenterPixels.y,
-
-  //       // color
-  //       chosenColor.r,
-  //       chosenColor.g,
-  //       chosenColor.b,
-  //       chosenColor.a ?? 0,
-
-  //       // size
-  //       chosenSize,
-
-  //       // texture coordinates
-  //       iconAnchor![0],
-  //       iconAnchor![1]
-  //     );
-
-  //     const vertex: IIconVertex = {
-  //       latLng,
-  //       key,
-  //       pixel,
-  //       chosenColor,
-  //       chosenSize,
-  //       feature: this.dataFormat === "Array" ? rawLatLng : feature,
-  //     };
-  //     this.addLookup(vertex);
-  //     if (eachVertex) {
-  //       eachVertex(vertex);
-  //     }
-  //   };
-
-  //   if (this.dataFormat === "Array") {
-  //     const max = data.length;
-  //     for (let i = 0; i < max; i++) {
-  //       processVertex(i, null);
-  //     }
-  //   } else if (this.dataFormat === "GeoJson.FeatureCollection") {
-  //     const max = data.features.length;
-  //     for (let i = 0; i < max; i++) {
-  //       const feature = data.features[i] as Feature<GeoPoint>;
-  //       processVertex(i, feature);
-  //     }
-  //   }
-
-  //   return this;
-  // }
 
   resetVertices(): this {
     console.log("Starting resetVertices");
@@ -450,6 +295,14 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
 
       pixel = map.project(latLng, 0);
       console.log("Projected to pixel", pixel);
+
+      console.log("mapCenterPixels", mapCenterPixels);
+
+      console.log(
+        "final pixel x/y: ",
+        pixel.x - mapCenterPixels.x,
+        pixel.y - mapCenterPixels.y
+      );
 
       if (colorFn) {
         chosenColor = colorFn(
@@ -542,36 +395,65 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     return this;
   }
 
+  setupState(): this {
+    console.log("icon-points setupState");
+    const { gl, canvas, layer, vertices, mapMatrix } = this;
+
+    if (!this.gl) return this;
+
+    if (!this.program) return this;
+
+    gl.useProgram(this.program!);
+
+    // buffer
+    const verticesBuffer = this.getBuffer("vertices");
+    gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
+
+    // buffer data
+    const verticesTyped = (this.typedVertices = new Float32Array(vertices));
+    const byteCount = verticesTyped.BYTES_PER_ELEMENT;
+    gl.bufferData(gl.ARRAY_BUFFER, verticesTyped, gl.STATIC_DRAW);
+
+    // attach shader variables
+    this.attachShaderVariables(byteCount);
+
+    // setup uniforms
+    const matrix = (this.matrix = gl.getUniformLocation(
+      this.program!,
+      "matrix"
+    ));
+    gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
+
+    const uTextureSizeLocation = gl.getUniformLocation(
+      this.program!,
+      "u_textureSize"
+    );
+    gl.uniform2f(uTextureSizeLocation, this.textureWidth, this.textureHeight);
+
+    const uOutlineThicknessLocation = gl.getUniformLocation(
+      this.program!,
+      "u_outlineThickness"
+    );
+    gl.uniform1f(uOutlineThicknessLocation, 5); // Adjust this value for desired thickness
+
+    // Bind texture
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    const uTexture = gl.getUniformLocation(this.program!, "uTexture");
+    gl.uniform1i(uTexture, 0);
+
+    return this;
+  }
+
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
-    // DEBUG
     console.log("Drawing IconPoints on canvas");
-    console.log(
-      "checking if the correct program is still selected at this point in time"
-    );
-    const test = this.gl.getParameter(this.gl.CURRENT_PROGRAM);
 
-    if (test === this.program) {
-      console.log("Program is the same");
-    } else {
-      console.log("Program is different");
-      console.log("switching to correct program");
-      this.gl.useProgram(this.program);
-      // TODO fix
-    }
-    // INFO this got rid of the warnigns, but still not getting anything on the canvas
-    // DEBUG
+    const { gl, canvas, mapMatrix, map, allLatLngLookup, mapCenterPixels } =
+      this;
 
-    const {
-      gl,
-      canvas,
-      mapMatrix,
-      map,
-      matrix,
-      allLatLngLookup,
-      mapCenterPixels,
-    } = this;
+    // map transformation matrix setup
     const { offset } = e;
     const zoom = map.getZoom();
 
@@ -602,23 +484,13 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
       .translateTo(-offsetValue.x + center.x, -offsetValue.y + center.y);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
+
     gl.viewport(0, 0, canvas.width, canvas.height);
 
-    // TEST
-    const testMatrix = (this.matrix = gl.getUniformLocation(
-      this.program!,
-      "matrix"
-    ));
-
-    gl.uniformMatrix4fv(testMatrix, false, mapMatrix.array);
-
-    // gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
-
-    // Bind texture
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.texture);
-    const uTexture = this.getUniformLocation("uTexture");
-    gl.uniform1i(uTexture, 0);
+    // setupState function is called here, after mapMatrix is set
+    // sets uniforms, texture, buffer, buffer var locations etc
+    // basically prepares everything for the below draw call
+    this.setupState();
 
     gl.drawArrays(gl.POINTS, 0, allLatLngLookup.length);
 

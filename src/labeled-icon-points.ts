@@ -62,13 +62,16 @@ class LabeledIconPoints extends IconPoints {
   private isInitialized: boolean = false;
   private initPromise: Promise<void>;
 
+  private textData: number[] = [];
+  private backgroundData: number[] = [];
+
   constructor(settings: ILabeledIconPointsSettings) {
     super(settings);
     this.labelSettings = {
       labelOffset: [0, 0],
-      labelFont: "12px Arial",
+      labelFont: "12px Arial", // wtf am i even using this for what was i smoking?
       labelColor: { r: 0, g: 0, b: 0, a: 1 },
-      labelBackgroundColor: { r: 255, g: 255, b: 255, a: 0.7 },
+      labelBackgroundColor: { r: 255, g: 255, b: 255, a: 1 },
       labelText: () => "",
       labelBackgroundPadding: [2, 2],
       labelBackgroundCornerRadius: 3,
@@ -77,6 +80,7 @@ class LabeledIconPoints extends IconPoints {
 
     // Check for WebGL2 support
     this.isWebGL2 = this.gl instanceof WebGL2RenderingContext;
+    console.log("isWebGL2:", this.isWebGL2);
 
     this.initPromise = this.initializeLabelRendering();
   }
@@ -97,6 +101,7 @@ class LabeledIconPoints extends IconPoints {
     }
   }
 
+  // rethink?
   private async loadFontAtlas(): Promise<void> {
     this.fontAtlas = fontAtlasJson;
 
@@ -110,6 +115,8 @@ class LabeledIconPoints extends IconPoints {
         }
         this.fontTexture = texture;
 
+        // TODO separate out, call in own func, needs to be re called?
+        this.gl.activeTexture(this.gl.TEXTURE1);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.fontTexture);
         this.gl.texImage2D(
           this.gl.TEXTURE_2D,
@@ -148,6 +155,7 @@ class LabeledIconPoints extends IconPoints {
       };
 
       // Set the source to the imported base64 image data
+      // is converted to b64 by webpack plugin
       image.src = fontAtlasImageSrc;
     });
   }
@@ -239,8 +247,6 @@ class LabeledIconPoints extends IconPoints {
   }
 
   private createBuffers() {
-    // WARN this is probably wrong too..
-    // too many coordinates?
     const glyphQuadVertices = new Float32Array([
       0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1,
     ]);
@@ -271,157 +277,235 @@ class LabeledIconPoints extends IconPoints {
     this.backgroundBuffer = backgroundBuffer;
   }
 
-  private async renderIcons(): Promise<void> {
-    await new Promise<void>((resolve) => {
-      this.gl.useProgram(this.program);
-      super.render();
-      this.layer.eventEmitter.on("drawend", () => resolve());
-    });
-  }
-
   render(): this {
     console.log("render call!");
     if (this.isInitialized) {
-      this.renderIcons()
-        .then(() => {
-          console.log("super render done");
-          this.renderLabels();
-          console.log("label render called");
-        })
-        .finally(() => {
-          console.log("render call done");
-        });
+      console.log("is initialized");
+
+      // call super render with optional property noRedraw = false to disable redraw call
+      super.render(false);
+      console.log("super render called");
+
+      // setup data for labels
+      // needs to be called after super render since super render calls resetVertices and that sets up the coordinates
+      // more of that can be reused tbh, i might be recalculating too much
+      // also, consider destructuring render in the base class and using subfuncs here
+      this.updateLabelInstanceData();
+
+      // perform redraw call - will pass this.drawOnCanvas as a callback to rAF which should render all
+      this.layer.redraw();
     }
     return this;
   }
 
-  // render(): this {
-  //   console.log("render call!");
-  //   if (this.isInitialized) {
-  //     console.log("is initialized");
-  //     this.gl.useProgram(this.program);
-  //     console.log("main program used");
-  //     super.render();
-  //     console.log("super render called");
-  //     this.renderLabels();
-  //     console.log("label render called");
-  //   }
-  //   // this kind of defered rendering is not working it seems
-  //   // promise resolves at some random point and then i get webgl errors
-  //   // just .. commenting it out seems to work?
-  //   // why did i write it in the first place?
-  //   // nobody knows
-  //   // else {
-  //   //   console.log("not initialized");
-  //   //   this.initPromise.then(() => {
-  //   //     console.log("init promise resolved");
-  //   //     if (this.isInitialized) {
-  //   //       console.log("is initialized");
-  //   //       this.gl.useProgram(this.program);
-  //   //       console.log("main program used");
-  //   //       super.render();
-  //   //       console.log("super render called");
-  //   //       this.renderLabels();
-  //   //       console.log("label render called");
-  //   //     }
-  //   //   });
-  //   // }
-  //   console.log("render call done");
-  //   return this;
-  // }
+  private setupStateBackground(): this {
+    const { gl } = this;
+    console.log("setupStateBackground called");
 
-  private renderLabels() {
-    if (!this.backgroundShader || !this.labelShader || !this.fontTexture) {
-      console.log("shader or font issue:");
-      if (!this.backgroundShader) {
-        console.log("Shader program 'backgroundShader' not initialized");
+    // sanity check
+    if (!this.backgroundShader) return this;
+
+    if (!this.gl) return this;
+
+    // set up program
+    gl.useProgram(this.backgroundShader!);
+
+    // set up buffer
+    console.log("Binding backgroundBuffer");
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.backgroundBuffer);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array(this.backgroundData),
+      gl.STATIC_DRAW
+    );
+
+    // set up shader variables
+    // position attribute
+    const positionLocation = gl.getAttribLocation(
+      this.backgroundShader!,
+      "position"
+    );
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 48, 0);
+
+    // size attribute
+    const sizeLocation = gl.getAttribLocation(this.backgroundShader!, "size");
+    gl.enableVertexAttribArray(sizeLocation);
+    gl.vertexAttribPointer(sizeLocation, 2, gl.FLOAT, false, 48, 16);
+
+    // color attribute
+    const colorLocation = gl.getAttribLocation(this.backgroundShader!, "color");
+    gl.enableVertexAttribArray(colorLocation);
+    gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 48, 24);
+
+    // offset attribute
+    const offsetLocation = gl.getAttribLocation(
+      this.backgroundShader!,
+      "offset"
+    );
+    gl.enableVertexAttribArray(offsetLocation);
+    gl.vertexAttribPointer(offsetLocation, 2, gl.FLOAT, false, 48, 40);
+
+    // set up instanced rendering
+
+    if (this.isWebGL2) {
+      const gl2 = gl as WebGL2RenderingContext;
+      gl2.vertexAttribDivisor(positionLocation, 1);
+      gl2.vertexAttribDivisor(sizeLocation, 1);
+      gl2.vertexAttribDivisor(colorLocation, 1);
+      gl2.vertexAttribDivisor(offsetLocation, 1);
+    } else {
+      const ext = gl.getExtension("ANGLE_instanced_arrays");
+      if (!ext) {
+        throw new Error("ANGLE_instanced_arrays extension not supported");
       }
-      if (!this.labelShader) {
-        console.log("Shader program 'labelShader' not initialized");
-      }
-      if (!this.fontTexture) {
-        console.log("Font texture not initialized");
-      }
-      return;
+      ext.vertexAttribDivisorANGLE(positionLocation, 1);
+      ext.vertexAttribDivisorANGLE(sizeLocation, 1);
+      ext.vertexAttribDivisorANGLE(colorLocation, 1);
+      ext.vertexAttribDivisorANGLE(offsetLocation, 1);
     }
 
-    const { gl } = this;
-
-    console.log("Rendering labels");
-
-    // Render backgrounds
-    gl.useProgram(this.backgroundShader!);
-    console.log("background shader used");
+    // set up uniforms
     this.setBackgroundUniforms();
-    console.log("background uniforms set");
-    this.drawBackgrounds();
-    console.log("backgrounds drawn");
 
-    // Render text
-    gl.useProgram(this.labelShader!);
-    console.log("label shader used");
-    this.setTextUniforms();
-    console.log("text uniforms set");
-    this.drawText();
-    console.log("text drawn");
+    return this;
   }
 
-  //   private setBackgroundUniforms() {
-  //     console.log("Setting background uniforms");
+  private setupStateText(): this {
+    const { gl } = this;
+    console.log("setupStateText called");
 
-  //     if (!this.backgroundShader) {
-  //       console.log("Background shader not initialized");
-  //     }
+    // sanity checks
+    if (!this.labelShader) return this;
 
-  //     const { gl, mapMatrix } = this;
+    if (!this.gl) return this;
 
-  //     const backgroundMatrixLocation = gl.getUniformLocation(
-  //       this.backgroundShader!,
-  //       "matrix"
-  //     );
-  //     if (backgroundMatrixLocation === null) {
-  //       console.error("Unable to get uniform location for 'matrix'");
-  //     }
-  //     gl.uniformMatrix4fv(backgroundMatrixLocation, false, mapMatrix.array);
+    // set up program
+    gl.useProgram(this.labelShader!);
 
-  //     const backgroundColorLocation = gl.getUniformLocation(
-  //       this.backgroundShader!,
-  //       "color"
-  //     );
-  //     if (backgroundColorLocation === null) {
-  //       console.error("Unable to get uniform location for 'color'");
-  //     }
-  //     gl.uniform4fv(
-  //       backgroundColorLocation,
-  //       this.labelSettings.labelBackgroundColor ?? [255, 255, 255, 0.7]
-  //     );
+    // set up glyqp quad buffer
+    console.log("Binding glyphQuad buffer");
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.glyphQuad!); // data never changes
 
-  //     const labelSizeLocation = gl.getUniformLocation(
-  //       this.backgroundShader!,
-  //       "size"
-  //     );
-  //     if (labelSizeLocation === null) {
-  //       console.error("Unable to get uniform location for 'size'");
-  //     }
-  //     gl.uniform2f(
-  //       labelSizeLocation,
-  //       this.labelSettings.iconSize,
-  //       this.labelSettings.iconSize / 2
-  //     );
+    // set up glyph quad attributes
+    // position attribute
+    const positionLocation = gl.getAttribLocation(
+      this.labelShader!,
+      "position"
+    );
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 16, 0);
 
-  //     const cornerRadiusLocation = gl.getUniformLocation(
-  //       this.backgroundShader!,
-  //       "cornerRadius"
-  //     );
-  //     if (cornerRadiusLocation === null) {
-  //       console.error("Unable to get uniform location for 'cornerRadius'");
-  //     }
-  //     gl.uniform1f(cornerRadiusLocation, 5.0); // Adjust as needed
-  //   }
+    // texCoord attribute
+    const texCoordLocation = gl.getAttribLocation(
+      this.labelShader!,
+      "texCoord"
+    );
+    gl.enableVertexAttribArray(texCoordLocation);
+    gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 16, 8);
+
+    // set up buffer
+    console.log("Binding labelInstanceData buffer");
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.labelInstanceData);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array(this.textData),
+      gl.STATIC_DRAW
+    );
+
+    // set up shader variables
+    // position attribute
+    const instancePositionLocation = gl.getAttribLocation(
+      this.labelShader!,
+      "instancePosition"
+    );
+    gl.enableVertexAttribArray(instancePositionLocation);
+    gl.vertexAttribPointer(instancePositionLocation, 2, gl.FLOAT, false, 44, 0);
+
+    // offset attribute
+    const instanceOffsetLocation = gl.getAttribLocation(
+      this.labelShader!,
+      "instanceOffset"
+    );
+    gl.enableVertexAttribArray(instanceOffsetLocation);
+    gl.vertexAttribPointer(instanceOffsetLocation, 1, gl.FLOAT, false, 44, 8);
+
+    // texCoord attribute
+    const instanceTexCoordLocation = gl.getAttribLocation(
+      this.labelShader!,
+      "instanceTexCoord"
+    );
+    gl.enableVertexAttribArray(instanceTexCoordLocation);
+    gl.vertexAttribPointer(
+      instanceTexCoordLocation,
+      4,
+      gl.FLOAT,
+      false,
+      44,
+      12
+    );
+
+    // color attribute
+    const instanceColorLocation = gl.getAttribLocation(
+      this.labelShader!,
+      "instanceColor"
+    );
+    gl.enableVertexAttribArray(instanceColorLocation);
+    gl.vertexAttribPointer(instanceColorLocation, 4, gl.FLOAT, false, 44, 28);
+
+    // set up instanced rendering
+    if (this.isWebGL2) {
+      const gl2 = gl as WebGL2RenderingContext;
+      gl2.vertexAttribDivisor(instancePositionLocation, 1);
+      gl2.vertexAttribDivisor(instanceOffsetLocation, 1);
+      gl2.vertexAttribDivisor(instanceTexCoordLocation, 1);
+      gl2.vertexAttribDivisor(instanceColorLocation, 1);
+    } else {
+      const ext = gl.getExtension("ANGLE_instanced_arrays");
+      if (!ext) {
+        throw new Error("ANGLE_instanced_arrays extension not supported");
+      }
+      ext.vertexAttribDivisorANGLE(instancePositionLocation, 1);
+      ext.vertexAttribDivisorANGLE(instanceOffsetLocation, 1);
+      ext.vertexAttribDivisorANGLE(instanceTexCoordLocation, 1);
+      ext.vertexAttribDivisorANGLE(instanceColorLocation, 1);
+    }
+
+    // set up uniforms
+    this.setTextUniforms();
+
+    // WARN debug
+    console.log("debug information:");
+    console.log("positionLocation:", positionLocation);
+    console.log("texCoordLocation:", texCoordLocation);
+    console.log("instancePositionLocation:", instancePositionLocation);
+    console.log("instanceOffsetLocation:", instanceOffsetLocation);
+    console.log("instanceTexCoordLocation:", instanceTexCoordLocation);
+    console.log("instanceColorLocation:", instanceColorLocation);
+
+    try {
+      const scaleLocation = gl.getUniformLocation(this.labelShader!, "uScale");
+
+      const matrixLocation = gl.getUniformLocation(this.labelShader!, "matrix");
+
+      console.log("matrix:", gl.getUniform(this.labelShader, matrixLocation!));
+
+      console.log("uScale:", gl.getUniform(this.labelShader, scaleLocation!));
+    } catch (error) {
+      console.error("Error getting uniforms:", error);
+    }
+    // WARN debug
+
+    return this;
+  }
 
   private setBackgroundUniforms() {
     const { gl, mapMatrix } = this;
 
+    const currentZoom = this.map.getZoom();
+    const scale = Math.pow(2, currentZoom);
+
+    // map transformation matrix
     const backgroundMatrixLocation = gl.getUniformLocation(
       this.backgroundShader!,
       "matrix"
@@ -431,44 +515,58 @@ class LabeledIconPoints extends IconPoints {
     } else {
       gl.uniformMatrix4fv(backgroundMatrixLocation, false, mapMatrix.array);
     }
+
+    // scale
+    const scaleLocation = gl.getUniformLocation(
+      this.backgroundShader!,
+      "uScale"
+    );
+    if (scaleLocation === null) {
+      console.error("Unable to get uniform location for 'uScale'");
+    } else {
+      gl.uniform1f(scaleLocation, scale);
+    }
+
+    // background corner radius
+    const backgroundRadiusLocation = gl.getUniformLocation(
+      this.backgroundShader!,
+      "uCornerRadius"
+    );
+    if (backgroundRadiusLocation === null) {
+      console.error("Unable to get uniform location for 'uCornerRadius'");
+    } else {
+      // INFO corder radius 20 ?
+      const radius: number = 16;
+      gl.uniform1f(backgroundRadiusLocation, radius);
+    }
+
+    // background outline thickness
+    const backgroundOutlineLocation = gl.getUniformLocation(
+      this.backgroundShader!,
+      "uOutlineThickness"
+    );
+    if (backgroundOutlineLocation === null) {
+      console.error("Unable to get uniform location for 'uOutlineThickness'");
+    } else {
+      // INFO outline thickness 3 ?
+      const thock: number = 3;
+      gl.uniform1f(backgroundOutlineLocation, thock);
+    }
   }
 
   private drawBackgrounds() {
     const { gl } = this;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.backgroundBuffer!);
 
-    const positionLocation = gl.getAttribLocation(
-      this.backgroundShader!,
-      "position"
-    );
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 24, 0);
+    // sanity check
+    if (!this.backgroundShader) return this;
 
-    const sizeLocation = gl.getAttribLocation(this.backgroundShader!, "size");
-    gl.enableVertexAttribArray(sizeLocation);
-    gl.vertexAttribPointer(sizeLocation, 2, gl.FLOAT, false, 24, 8);
-
-    const cornerRadiusLocation = gl.getAttribLocation(
-      this.backgroundShader!,
-      "cornerRadius"
-    );
-    gl.enableVertexAttribArray(cornerRadiusLocation);
-    gl.vertexAttribPointer(cornerRadiusLocation, 1, gl.FLOAT, false, 24, 16);
-
-    const colorLocation = gl.getAttribLocation(this.backgroundShader!, "color");
-    gl.enableVertexAttribArray(colorLocation);
-    gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 24, 20);
-
-    // WARN stride is probably wrong
-    // (2+2+1+4)*4 = 36
-    // again, i dont trust my brain today but.. it should be 36
+    if (!this.gl) return this;
 
     if (this.isWebGL2) {
       const gl2 = gl as WebGL2RenderingContext;
-      gl2.vertexAttribDivisor(positionLocation, 1);
-      gl2.vertexAttribDivisor(sizeLocation, 1);
-      gl2.vertexAttribDivisor(cornerRadiusLocation, 1);
-      gl2.vertexAttribDivisor(colorLocation, 1);
+      // divisors for instanced rendering
+
+      // Instanced rendering
       gl2.drawArraysInstanced(
         gl2.TRIANGLE_STRIP,
         0,
@@ -480,10 +578,6 @@ class LabeledIconPoints extends IconPoints {
       if (!ext) {
         throw new Error("ANGLE_instanced_arrays extension not supported");
       }
-      ext.vertexAttribDivisorANGLE(positionLocation, 1);
-      ext.vertexAttribDivisorANGLE(sizeLocation, 1);
-      ext.vertexAttribDivisorANGLE(cornerRadiusLocation, 1);
-      ext.vertexAttribDivisorANGLE(colorLocation, 1);
       ext.drawArraysInstancedANGLE(
         gl.TRIANGLE_STRIP,
         0,
@@ -493,45 +587,11 @@ class LabeledIconPoints extends IconPoints {
     }
   }
 
-  //   private setTextUniforms() {
-  //     console.log("Setting text uniforms");
-
-  //     if (!this.backgroundShader) {
-  //       console.log("Text shader not initialized");
-  //     }
-
-  //     const { gl, mapMatrix } = this;
-  //     const textMatrixLocation = gl.getUniformLocation(
-  //       this.labelShader!,
-  //       "matrix"
-  //     );
-  //     gl.uniformMatrix4fv(textMatrixLocation, false, mapMatrix.array);
-
-  //     const fontTextureLocation = gl.getUniformLocation(
-  //       this.labelShader!,
-  //       "fontTexture"
-  //     );
-  //     gl.uniform1i(fontTextureLocation, 0);
-
-  //     const smoothingLocation = gl.getUniformLocation(
-  //       this.labelShader!,
-  //       "smoothing"
-  //     );
-  //     gl.uniform1f(smoothingLocation, 0.1); // Adjust as needed
-
-  //     const labelSizeLocation = gl.getUniformLocation(
-  //       this.labelShader!,
-  //       "labelSize"
-  //     );
-  //     gl.uniform2f(
-  //       labelSizeLocation,
-  //       this.labelSettings.iconSize,
-  //       this.labelSettings.iconSize / 2
-  //     );
-  //   }
-
   private setTextUniforms() {
     const { gl, mapMatrix } = this;
+
+    const currentZoom = this.map.getZoom();
+    const scale = Math.pow(2, currentZoom);
 
     const textMatrixLocation = gl.getUniformLocation(
       this.labelShader!,
@@ -543,96 +603,80 @@ class LabeledIconPoints extends IconPoints {
       gl.uniformMatrix4fv(textMatrixLocation, false, mapMatrix.array);
     }
 
-    const fontTextureLocation = gl.getUniformLocation(
-      this.labelShader!,
-      "fontTexture"
-    );
-    if (fontTextureLocation === null) {
-      console.error("Unable to get uniform location for 'fontTexture'");
+    // scale
+    const scaleLocation = gl.getUniformLocation(this.labelShader!, "uScale");
+    if (scaleLocation === null) {
+      console.error("Unable to get uniform location for 'uScale'");
     } else {
-      gl.uniform1i(fontTextureLocation, 0);
+      gl.uniform1f(scaleLocation, scale);
     }
 
-    const smoothingLocation = gl.getUniformLocation(
-      this.labelShader!,
-      "smoothing"
-    );
-    if (smoothingLocation === null) {
-      console.error("Unable to get uniform location for 'smoothing'");
-    } else {
-      gl.uniform1f(smoothingLocation, 0.1); // Adjust as needed
-    }
+    // WARN commented out for testing
+    // // set webgl to use texture registry 1
+    // gl.activeTexture(gl.TEXTURE1);
+    // gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
+    // const fontTextureLocation = gl.getUniformLocation(
+    //   this.labelShader!,
+    //   "fontTexture"
+    // );
+    // if (fontTextureLocation === null) {
+    //   console.error("Unable to get uniform location for 'fontTexture'");
+    // } else {
+    //   // 1 here points to texture registry 1
+    //   gl.uniform1i(fontTextureLocation, 1);
+    // }
+
+    // const smoothingLocation = gl.getUniformLocation(
+    //   this.labelShader!,
+    //   "smoothing"
+    // );
+    // if (smoothingLocation === null) {
+    //   console.error("Unable to get uniform location for 'smoothing'");
+    // } else {
+    //   gl.uniform1f(smoothingLocation, 0.1); // Adjust as needed
+    // }
+    // WARN commented out for testing
   }
 
   private drawText() {
     const { gl } = this;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.glyphQuad!);
 
-    const positionLocation = gl.getAttribLocation(
-      this.labelShader!,
-      "position"
+    // sanity check
+    if (!this.backgroundShader) return this;
+
+    if (!this.gl) return this;
+
+    const glyphs: number = this.getTotalGlyphCount();
+
+    // WARN debug
+    console.log("Program info log:", gl.getProgramInfoLog(this.labelShader!));
+    console.log("Viewport:", gl.getParameter(gl.VIEWPORT));
+    console.log("Scissor test enabled:", gl.getParameter(gl.SCISSOR_TEST));
+    console.log("Scissor box:", gl.getParameter(gl.SCISSOR_BOX));
+    console.log("Blend enabled:", gl.getParameter(gl.BLEND));
+    console.log(
+      "Blend func:",
+      gl.getParameter(gl.BLEND_SRC_RGB),
+      gl.getParameter(gl.BLEND_DST_RGB)
     );
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 16, 0);
+    console.log("Depth test enabled:", gl.getParameter(gl.DEPTH_TEST));
+    console.log("Depth func:", gl.getParameter(gl.DEPTH_FUNC));
+    console.log("Stencil test enabled:", gl.getParameter(gl.STENCIL_TEST));
+    console.log("Cull face enabled:", gl.getParameter(gl.CULL_FACE));
+    console.log("Cull face mode:", gl.getParameter(gl.CULL_FACE_MODE));
+    console.log("Drawing text:", gl.TRIANGLES, 0, 6, glyphs);
 
-    const texCoordLocation = gl.getAttribLocation(
-      this.labelShader!,
-      "texCoord"
-    );
-    gl.enableVertexAttribArray(texCoordLocation);
-    gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 16, 8);
-
-    // INFO stride seems right here
-    // (2+2)*4 = 16
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.labelInstanceData!);
-
-    const instancePositionLocation = gl.getAttribLocation(
-      this.labelShader!,
-      "instancePosition"
-    );
-    gl.enableVertexAttribArray(instancePositionLocation);
-    gl.vertexAttribPointer(instancePositionLocation, 2, gl.FLOAT, false, 32, 0);
-
-    const instanceTexCoordLocation = gl.getAttribLocation(
-      this.labelShader!,
-      "instanceTexCoord"
-    );
-    gl.enableVertexAttribArray(instanceTexCoordLocation);
-    gl.vertexAttribPointer(instanceTexCoordLocation, 4, gl.FLOAT, false, 32, 8);
-
-    const instanceColorLocation = gl.getAttribLocation(
-      this.labelShader!,
-      "instanceColor"
-    );
-    gl.enableVertexAttribArray(instanceColorLocation);
-    gl.vertexAttribPointer(instanceColorLocation, 4, gl.FLOAT, false, 32, 24);
-
-    // WARN stride is probably wrong
-    // (2+4+4)*4 = 40
-    // so it should be 40..
-    // but i dont trust my brain today
+    // WARN debug
 
     if (this.isWebGL2) {
       const gl2 = gl as WebGL2RenderingContext;
-      gl2.vertexAttribDivisor(instancePositionLocation, 1);
-      gl2.vertexAttribDivisor(instanceTexCoordLocation, 1);
-      gl2.vertexAttribDivisor(instanceColorLocation, 1);
-      gl2.drawArraysInstanced(gl2.TRIANGLES, 0, 6, this.getTotalGlyphCount());
+      gl2.drawArraysInstanced(gl2.TRIANGLES, 0, 6, glyphs);
     } else {
       const ext = gl.getExtension("ANGLE_instanced_arrays");
       if (!ext) {
         throw new Error("ANGLE_instanced_arrays extension not supported");
       }
-      ext.vertexAttribDivisorANGLE(instancePositionLocation, 1);
-      ext.vertexAttribDivisorANGLE(instanceTexCoordLocation, 1);
-      ext.vertexAttribDivisorANGLE(instanceColorLocation, 1);
-      ext.drawArraysInstancedANGLE(
-        gl.TRIANGLES,
-        0,
-        6,
-        this.getTotalGlyphCount()
-      );
+      ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, glyphs);
     }
   }
 
@@ -648,98 +692,23 @@ class LabeledIconPoints extends IconPoints {
     return count;
   }
 
-  //   private updateLabelInstanceData() {
-  //     if (!this.labelInstanceData || !this.backgroundBuffer) return;
-
-  //     const textData: number[] = [];
-  //     const backgroundData: number[] = [];
-  //     const features = Array.isArray(this.settings.data)
-  //       ? this.settings.data
-  //       : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
-
-  //     features.forEach((feature, index) => {
-  //       const text = this.getLabelText(feature as ILabeledFeature | number[]);
-  //       const offset = this.getLabelOffset(feature as ILabeledFeature | number[]);
-  //       const position = this.calculateLabelPosition(
-  //         this.allLatLngLookup[index],
-  //         offset
-  //       );
-  //       const labelColor = this.getLabelColor(
-  //         feature as ILabeledFeature | number[]
-  //       );
-  //       const backgroundColor = this.getLabelBackgroundColor(
-  //         feature as ILabeledFeature | number[]
-  //       );
-  //       const padding = this.getLabelBackgroundPadding(
-  //         feature as ILabeledFeature | number[]
-  //       );
-  //       const cornerRadius = this.getLabelBackgroundCornerRadius(
-  //         feature as ILabeledFeature | number[]
-  //       );
-
-  //       let xOffset = 0;
-  //       let maxWidth = 0;
-  //       let maxHeight = 0;
-
-  //       for (let i = 0; i < text.length; i++) {
-  //         const char = text[i];
-  //         const charInfo = this.fontAtlas.chars[char];
-  //         if (!charInfo) continue;
-
-  //         textData.push(
-  //           position[0] + xOffset,
-  //           position[1], // position
-  //           charInfo.x,
-  //           charInfo.y,
-  //           charInfo.width,
-  //           charInfo.height, // texture coordinates
-  //           ...labelColor // color
-  //         );
-
-  //         xOffset += charInfo.width;
-  //         maxWidth = Math.max(maxWidth, xOffset);
-  //         maxHeight = Math.max(maxHeight, charInfo.height);
-  //       }
-
-  //       // Add background data
-  //       const bgWidth = maxWidth + padding[0] * 2;
-  //       const bgHeight = maxHeight + padding[1] * 2;
-  //       backgroundData.push(
-  //         position[0] - padding[0],
-  //         position[1] - padding[1], // position
-  //         bgWidth,
-  //         bgHeight, // size
-  //         cornerRadius, // corner radius
-  //         ...backgroundColor // color
-  //       );
-  //     });
-
-  //     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.labelInstanceData);
-  //     this.gl.bufferData(
-  //       this.gl.ARRAY_BUFFER,
-  //       new Float32Array(textData),
-  //       this.gl.DYNAMIC_DRAW
-  //     );
-
-  //     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.backgroundBuffer);
-  //     this.gl.bufferData(
-  //       this.gl.ARRAY_BUFFER,
-  //       new Float32Array(backgroundData),
-  //       this.gl.DYNAMIC_DRAW
-  //     );
-  //   }
-
-  private updateLabelInstanceData() {
+  private updateLabelInstanceData(): this {
     console.log("Starting updateLabelInstanceData");
+
+    this.textData = [];
+    this.backgroundData = [];
 
     if (!this.labelInstanceData || !this.backgroundBuffer) {
       console.log("labelInstanceData or backgroundBuffer is null, returning");
-      return;
+      return this;
     }
 
-    const textData: number[] = [];
-    const backgroundData: number[] = [];
     console.log("Initialized textData and backgroundData arrays");
+
+    const currentZoom = this.map.getZoom();
+    const scale = Math.pow(2, currentZoom);
+    console.log("Current Zoom:", currentZoom);
+    console.log("Resulting scale:", scale);
 
     const features = Array.isArray(this.settings.data)
       ? this.settings.data
@@ -757,10 +726,13 @@ class LabeledIconPoints extends IconPoints {
       const offset = this.getLabelOffset(feature as ILabeledFeature | number[]);
       console.log("Label offset:", offset);
 
-      const position = this.calculateLabelPosition(
-        this.allLatLngLookup[index],
-        offset
-      );
+      const rawLatLng = this.allLatLngLookup[index].latLng;
+      const pixel = this.map.project(rawLatLng, 0);
+      const position: [number, number] = [
+        pixel.x - this.mapCenterPixels.x,
+        pixel.y - this.mapCenterPixels.y,
+      ];
+
       console.log("Calculated label position:", position);
 
       const labelColor = this.getLabelColor(
@@ -801,12 +773,15 @@ class LabeledIconPoints extends IconPoints {
         console.log("Char info:", charInfo);
 
         const charData = [
-          position[0] + xOffset,
-          position[1], // position
+          // position is in leaflet coordinates at zoom level 0 shifted to use a central origin
+          // cuz leaflet uses central origin - offsets are scaled to zoom 0 and applied in the shader
+          position[0], // the corresponding shader parameter is called instancePosition !warn could be confusing
+          position[1],
+          xOffset, // in pixels, scaled in the shader
           charInfo.x,
           charInfo.y,
           charInfo.width,
-          charInfo.height, // texture coordinates
+          charInfo.height, // pixels, scaled in the shader
           labelColor.r, // color
           labelColor.g,
           labelColor.b,
@@ -816,7 +791,7 @@ class LabeledIconPoints extends IconPoints {
         // INFO breaks before here.. has to be color then
         console.log("Char data to be pushed:", charData);
 
-        textData.push(...charData);
+        this.textData.push(...charData);
 
         xOffset += charInfo.width;
         maxWidth = Math.max(maxWidth, xOffset);
@@ -827,58 +802,63 @@ class LabeledIconPoints extends IconPoints {
       console.log("Max width:", maxWidth);
       console.log("Max height:", maxHeight);
 
+      // temp test offsets:
+      const pixelOffset: [number, number] = [18, -40];
+
       // Add background data
       const bgWidth = maxWidth + padding[0] * 2;
       const bgHeight = maxHeight + padding[1] * 2;
       const bgData = [
-        position[0] - padding[0],
-        position[1] - padding[1], // position
+        // position is in leaflet coordinates at zoom level 0 shifted to use a central origin
+        // cuz leaflet uses central origin - offsets are scaled to zoom 0 and applied in the shader
+        position[0], // - padding[0]  - add padding to pixel offset?
+        position[1], // - padding[1],
+        0,
+        1, // filling up the vec4 position im using to appease matmul gods
         bgWidth,
-        bgHeight, // size
-        cornerRadius, // corner radius
+        bgHeight, // size - pixels
         backgroundColor.r, // color
         backgroundColor.g,
         backgroundColor.b,
         backgroundColor.a ?? 1,
+        pixelOffset[0], // offset - pixels
+        pixelOffset[1],
       ];
       console.log("Background data to be pushed:", bgData);
 
-      backgroundData.push(...bgData);
+      this.backgroundData.push(...bgData);
     });
 
-    console.log("Final textData length:", textData.length);
-    console.log("Final backgroundData length:", backgroundData.length);
-
-    console.log("Binding labelInstanceData buffer");
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.labelInstanceData);
-    this.gl.bufferData(
-      this.gl.ARRAY_BUFFER,
-      new Float32Array(textData),
-      this.gl.DYNAMIC_DRAW
-    );
-
-    console.log("Binding backgroundBuffer");
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.backgroundBuffer);
-    this.gl.bufferData(
-      this.gl.ARRAY_BUFFER,
-      new Float32Array(backgroundData),
-      this.gl.DYNAMIC_DRAW
-    );
+    console.log("Final textData length:", this.textData.length);
+    console.log("Final backgroundData length:", this.backgroundData.length);
 
     console.log("Finished updateLabelInstanceData");
-  }
 
-  // TODO rethink this
-  // calling updateLabelInstanceData too many times per frame
-  drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
-    super.drawOnCanvas(e);
-    this.updateLabelPositions(e);
     return this;
   }
 
-  private updateLabelPositions(e: ICanvasOverlayDrawEvent) {
-    // Recalculate label positions based on new map state
-    this.updateLabelInstanceData();
+  drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
+    // TODO
+    // consider drawing into framebuffer here, then using post processing for AA
+    console.log("drawOnCanvas from labeled-icon-points called");
+
+    // super drawOnCanvas does extras:
+    // updates map matrix
+    // clears color buffer
+    // sets up viewport
+    super.drawOnCanvas(e);
+
+    this.setupStateBackground();
+
+    this.drawBackgrounds();
+
+    console.log("setupStateText");
+    // text drawing does not work yet
+    this.setupStateText();
+    console.log("drawText");
+    this.drawText();
+
+    return this;
   }
 
   private calculateLabelPosition(
@@ -988,8 +968,6 @@ class LabeledIconPoints extends IconPoints {
   resetVertices(): this {
     console.log("Resetting base class vertices");
     super.resetVertices();
-    console.log("Updating label instance data");
-    this.updateLabelInstanceData();
     return this;
   }
 
