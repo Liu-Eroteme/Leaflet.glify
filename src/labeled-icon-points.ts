@@ -11,6 +11,46 @@ import { LeafletMouseEvent, Map, LatLng } from "leaflet";
 import fontAtlasJson from "./resources/helvetica-msdf/Helvetica-msdf.json";
 import fontAtlasImageSrc from "./resources/helvetica-msdf/Helvetica.png";
 
+// test
+class MapState {
+  private _zoom: number = 0;
+  private _scale: number = 0;
+  private _map: Map;
+
+  constructor(map: Map) {
+    this._map = map;
+    this.setMapState(); // Initialize state
+  }
+
+  public setMapState = () => {
+    if (!this._map) {
+      throw new Error("Map reference is not set");
+    }
+
+    try {
+      const newZoom = this._map.getZoom();
+      if (typeof newZoom !== "number") {
+        throw new Error("Invalid zoom value returned from map");
+      }
+
+      if (newZoom !== this._zoom) {
+        this._zoom = newZoom;
+        this._scale = Math.pow(2, this._zoom);
+      }
+    } catch (error: any) {
+      throw new Error(`Failed to update map state: ${error.message}`);
+    }
+  };
+
+  get zoom(): number {
+    return this._zoom;
+  }
+
+  get scale(): number {
+    return this._scale;
+  }
+}
+
 // TODO switch color param arrays to ICOLOR
 interface IColor {
   r: number;
@@ -64,6 +104,16 @@ class LabeledIconPoints extends IconPoints {
 
   private textData: number[] = [];
   private backgroundData: number[] = [];
+
+  private atlasSize: [number, number] = [0, 0];
+
+  // TODO expand map state, save more here?
+  private mapState = new MapState(this.map);
+
+  // TODO TEMP
+  // WARN TEMP
+  // OPTIONS OPTIONS!!
+  private globalScaleFactor: number = 0.6;
 
   constructor(settings: ILabeledIconPointsSettings) {
     super(settings);
@@ -146,6 +196,8 @@ class LabeledIconPoints extends IconPoints {
           this.gl.TEXTURE_MAG_FILTER,
           this.gl.LINEAR
         );
+
+        this.atlasSize = [image.width, image.height];
 
         resolve();
       };
@@ -400,14 +452,6 @@ class LabeledIconPoints extends IconPoints {
     // gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 16, 0);
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 8, 0);
 
-    // // texCoord attribute
-    // const texCoordLocation = gl.getAttribLocation(
-    //   this.labelShader!,
-    //   "texCoord"
-    // );
-    // gl.enableVertexAttribArray(texCoordLocation);
-    // gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 16, 8);
-
     // set up buffer
     console.log("Binding labelInstanceData buffer");
     gl.bindBuffer(gl.ARRAY_BUFFER, this.labelInstanceData);
@@ -424,17 +468,19 @@ class LabeledIconPoints extends IconPoints {
       "instancePosition"
     );
     gl.enableVertexAttribArray(instancePositionLocation);
-    // gl.vertexAttribPointer(instancePositionLocation, 2, gl.FLOAT, false, 44, 0);
-    gl.vertexAttribPointer(instancePositionLocation, 2, gl.FLOAT, false, 28, 0);
+    gl.vertexAttribPointer(instancePositionLocation, 2, gl.FLOAT, false, 60, 0);
+    // gl.vertexAttribPointer(instancePositionLocation, 2, gl.FLOAT, false, 36, 0);
 
-    // offset attribute
-    const instanceOffsetLocation = gl.getAttribLocation(
+    // offset attribute 1
+    // this is float x offset between each char origin
+    // text spacing etc
+    const instanceOffsetXLocation = gl.getAttribLocation(
       this.labelShader!,
-      "instanceOffset"
+      "instanceOffsetX"
     );
-    gl.enableVertexAttribArray(instanceOffsetLocation);
-    // gl.vertexAttribPointer(instanceOffsetLocation, 1, gl.FLOAT, false, 44, 8);
-    gl.vertexAttribPointer(instanceOffsetLocation, 1, gl.FLOAT, false, 28, 8);
+    gl.enableVertexAttribArray(instanceOffsetXLocation);
+    gl.vertexAttribPointer(instanceOffsetXLocation, 1, gl.FLOAT, false, 60, 8);
+    // gl.vertexAttribPointer(instanceOffsetXLocation, 1, gl.FLOAT, false, 36, 8);
 
     // texCoord attribute
     const instanceTexCoordLocation = gl.getAttribLocation(
@@ -447,27 +493,55 @@ class LabeledIconPoints extends IconPoints {
       4,
       gl.FLOAT,
       false,
-      28,
-      // 44,
+      // 36,
+      60,
       12
     );
 
     // // color attribute
-    // const instanceColorLocation = gl.getAttribLocation(
-    //   this.labelShader!,
-    //   "instanceColor"
-    // );
-    // gl.enableVertexAttribArray(instanceColorLocation);
-    // gl.vertexAttribPointer(instanceColorLocation, 4, gl.FLOAT, false, 44, 28);
+    const instanceColorLocation = gl.getAttribLocation(
+      this.labelShader!,
+      "instanceColor"
+    );
+    gl.enableVertexAttribArray(instanceColorLocation);
+    gl.vertexAttribPointer(instanceColorLocation, 4, gl.FLOAT, false, 60, 28);
+
+    // offset attribute 2
+    // this is float x offset between each char origin
+    const instanceOffsetLocation = gl.getAttribLocation(
+      this.labelShader!,
+      "instanceOffset"
+    );
+    gl.enableVertexAttribArray(instanceOffsetLocation);
+    gl.vertexAttribPointer(instanceOffsetLocation, 2, gl.FLOAT, false, 60, 44);
+
+    // offset attribute 3
+    // this is text offset for individual characters
+    // used to align text with background
+    const instanceTextOffsetLocation = gl.getAttribLocation(
+      this.labelShader!,
+      "instanceTextOffset"
+    );
+    gl.enableVertexAttribArray(instanceTextOffsetLocation);
+    gl.vertexAttribPointer(
+      instanceTextOffsetLocation,
+      2,
+      gl.FLOAT,
+      false,
+      60,
+      52
+    );
 
     // set up instanced rendering
     if (this.isWebGL2) {
       const gl2 = gl as WebGL2RenderingContext;
       gl2.vertexAttribDivisor(positionLocation, 0);
       gl2.vertexAttribDivisor(instancePositionLocation, 1);
-      gl2.vertexAttribDivisor(instanceOffsetLocation, 1);
+      gl2.vertexAttribDivisor(instanceOffsetXLocation, 1);
       gl2.vertexAttribDivisor(instanceTexCoordLocation, 1);
-      // gl2.vertexAttribDivisor(instanceColorLocation, 1);
+      gl2.vertexAttribDivisor(instanceColorLocation, 1);
+      gl2.vertexAttribDivisor(instanceOffsetLocation, 1);
+      gl2.vertexAttribDivisor(instanceTextOffsetLocation, 1);
     } else {
       const ext = gl.getExtension("ANGLE_instanced_arrays");
       if (!ext) {
@@ -475,44 +549,21 @@ class LabeledIconPoints extends IconPoints {
       }
       ext.vertexAttribDivisorANGLE(positionLocation, 0);
       ext.vertexAttribDivisorANGLE(instancePositionLocation, 1);
-      ext.vertexAttribDivisorANGLE(instanceOffsetLocation, 1);
+      ext.vertexAttribDivisorANGLE(instanceOffsetXLocation, 1);
       ext.vertexAttribDivisorANGLE(instanceTexCoordLocation, 1);
-      // ext.vertexAttribDivisorANGLE(instanceColorLocation, 1);
+      ext.vertexAttribDivisorANGLE(instanceColorLocation, 1);
+      ext.vertexAttribDivisorANGLE(instanceOffsetLocation, 1);
+      ext.vertexAttribDivisorANGLE(instanceTextOffsetLocation, 1);
     }
 
     // set up uniforms
     this.setTextUniforms();
-
-    // WARN debug
-    console.log("debug information:");
-    console.log("positionLocation:", positionLocation);
-    // console.log("texCoordLocation:", texCoordLocation);
-    console.log("instancePositionLocation:", instancePositionLocation);
-    console.log("instanceOffsetLocation:", instanceOffsetLocation);
-    console.log("instanceTexCoordLocation:", instanceTexCoordLocation);
-    // console.log("instanceColorLocation:", instanceColorLocation);
-
-    try {
-      const scaleLocation = gl.getUniformLocation(this.labelShader!, "uScale");
-
-      const matrixLocation = gl.getUniformLocation(this.labelShader!, "matrix");
-
-      console.log("matrix:", gl.getUniform(this.labelShader, matrixLocation!));
-
-      console.log("uScale:", gl.getUniform(this.labelShader, scaleLocation!));
-    } catch (error) {
-      console.error("Error getting uniforms:", error);
-    }
-    // WARN debug
 
     return this;
   }
 
   private setBackgroundUniforms() {
     const { gl, mapMatrix } = this;
-
-    const currentZoom = this.map.getZoom();
-    const scale = Math.pow(2, currentZoom);
 
     // map transformation matrix
     const backgroundMatrixLocation = gl.getUniformLocation(
@@ -533,7 +584,18 @@ class LabeledIconPoints extends IconPoints {
     if (scaleLocation === null) {
       console.error("Unable to get uniform location for 'uScale'");
     } else {
-      gl.uniform1f(scaleLocation, scale);
+      gl.uniform1f(scaleLocation, this.mapState.scale);
+    }
+
+    // global scale
+    const globalScaleLocation = gl.getUniformLocation(
+      this.backgroundShader!,
+      "uGlobalScale"
+    );
+    if (globalScaleLocation === null) {
+      console.error("Unable to get uniform location for 'uGlobalScale'");
+    } else {
+      gl.uniform1f(globalScaleLocation, this.globalScaleFactor);
     }
 
     // background corner radius
@@ -599,9 +661,6 @@ class LabeledIconPoints extends IconPoints {
   private setTextUniforms() {
     const { gl, mapMatrix } = this;
 
-    const currentZoom = this.map.getZoom();
-    const scale = Math.pow(2, currentZoom);
-
     const textMatrixLocation = gl.getUniformLocation(
       this.labelShader!,
       "matrix"
@@ -617,34 +676,67 @@ class LabeledIconPoints extends IconPoints {
     if (scaleLocation === null) {
       console.error("Unable to get uniform location for 'uScale'");
     } else {
-      gl.uniform1f(scaleLocation, scale);
+      gl.uniform1f(scaleLocation, this.mapState.scale);
     }
 
-    // WARN commented out for testing
-    // // set webgl to use texture registry 1
-    // gl.activeTexture(gl.TEXTURE1);
-    // gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
-    // const fontTextureLocation = gl.getUniformLocation(
-    //   this.labelShader!,
-    //   "fontTexture"
-    // );
-    // if (fontTextureLocation === null) {
-    //   console.error("Unable to get uniform location for 'fontTexture'");
-    // } else {
-    //   // 1 here points to texture registry 1
-    //   gl.uniform1i(fontTextureLocation, 1);
-    // }
+    // global scale
+    const globalScaleLocation = gl.getUniformLocation(
+      this.labelShader!,
+      "uGlobalScale"
+    );
+    if (globalScaleLocation === null) {
+      console.error("Unable to get uniform location for 'uGlobalScale'");
+    } else {
+      gl.uniform1f(globalScaleLocation, this.globalScaleFactor);
+    }
 
-    // const smoothingLocation = gl.getUniformLocation(
-    //   this.labelShader!,
-    //   "smoothing"
-    // );
-    // if (smoothingLocation === null) {
-    //   console.error("Unable to get uniform location for 'smoothing'");
-    // } else {
-    //   gl.uniform1f(smoothingLocation, 0.1); // Adjust as needed
-    // }
-    // WARN commented out for testing
+    // texture Atlas
+    const atlasSizeLocation = gl.getUniformLocation(
+      this.labelShader!,
+      "atlasSize"
+    );
+    if (atlasSizeLocation === null) {
+      console.error("Unable to get uniform location for 'atlasSize'");
+    } else {
+      gl.uniform2f(atlasSizeLocation, this.atlasSize[0], this.atlasSize[1]);
+    }
+
+    // texture registry
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
+    const fontTextureLocation = gl.getUniformLocation(
+      this.labelShader!,
+      "fontTexture"
+    );
+    if (fontTextureLocation === null) {
+      console.error("Unable to get uniform location for 'fontTexture'");
+    } else {
+      // 1 here points to texture registry 1
+      gl.uniform1i(fontTextureLocation, 1);
+    }
+
+    // smothing factor
+    const smoothingLocation = gl.getUniformLocation(
+      this.labelShader!,
+      "smoothing"
+    );
+    if (smoothingLocation === null) {
+      console.error("Unable to get uniform location for 'smoothing'");
+    } else {
+      gl.uniform1f(smoothingLocation, 0.5); // Adjust as needed
+    }
+
+    // pxRange constant set based on msdf atlas
+    // TODO get from json
+    const pxRangeConstLocation = gl.getUniformLocation(
+      this.labelShader!,
+      "pxRangeConst"
+    );
+    if (pxRangeConstLocation === null) {
+      console.error("Unable to get uniform location for 'pxRangeConst'");
+    } else {
+      gl.uniform1f(pxRangeConstLocation, 4.0); // Adjust as needed
+    }
   }
 
   private drawText() {
@@ -714,11 +806,6 @@ class LabeledIconPoints extends IconPoints {
 
     console.log("Initialized textData and backgroundData arrays");
 
-    const currentZoom = this.map.getZoom();
-    const scale = Math.pow(2, currentZoom);
-    console.log("Current Zoom:", currentZoom);
-    console.log("Resulting scale:", scale);
-
     const features = Array.isArray(this.settings.data)
       ? this.settings.data
       : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
@@ -754,9 +841,10 @@ class LabeledIconPoints extends IconPoints {
       );
       console.log("Background color:", backgroundColor);
 
-      const padding = this.getLabelBackgroundPadding(
-        feature as ILabeledFeature | number[]
-      );
+      // const padding = this.getLabelBackgroundPadding(
+      //   feature as ILabeledFeature | number[]
+      // );
+      const padding: [number, number] = [5, 5];
       console.log("Background padding:", padding);
 
       const cornerRadius = this.getLabelBackgroundCornerRadius(
@@ -764,61 +852,96 @@ class LabeledIconPoints extends IconPoints {
       );
       console.log("Corner radius:", cornerRadius);
 
-      let xOffset = 0;
+      let xOffset = 5;
       let maxWidth = 0;
       let maxHeight = 0;
+
+      let maxYOffset = 0;
+      let minYOffset = 0;
+
+      // INFO offset vector from origin to label & text
+      // TODO get from settings / data obj !!
+      // const pixelOffset: [number, number] = [18, -40];
+      const pixelOffset: [number, number] = [25, -40];
+
+      let prevChar: number | null = null;
 
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
         console.log(`Processing character: ${char}`);
+
+        // TODO add space char
 
         // TODO change any type
         const charInfo = this.fontAtlas.chars.find((c: any) => c.char === char);
         if (!charInfo) {
           console.log(`No char info for: ${char}, skipping`);
           continue;
+        } else {
+          if (prevChar) {
+            const kerning = this.fontAtlas.kernings.find(
+              (k: any) => k.first === prevChar && k.second === charInfo.id
+            );
+            if (kerning) {
+              xOffset += kerning.amount;
+            }
+          }
         }
 
         console.log("Char info:", charInfo);
 
-        // INFO add pixelOffset
+        // TODO add pixelOffset
         const charData = [
           // position is in leaflet coordinates at zoom level 0 shifted to use a central origin
           // cuz leaflet uses central origin - offsets are scaled to zoom 0 and applied in the shader
-          position[0], // the corresponding shader parameter is called instancePosition !warn could be confusing
+          position[0], // WARN the corresponding shader parameter is called instancePosition ! could be confusing
           position[1],
           xOffset, // in pixels, scaled in the shader
           charInfo.x,
           charInfo.y,
           charInfo.width,
           charInfo.height, // pixels, scaled in the shader
-          // labelColor.r, // color
-          // labelColor.g,
-          // labelColor.b,
-          // labelColor.a ?? 1,
+          labelColor.r, // color
+          labelColor.g,
+          labelColor.b,
+          labelColor.a ?? 1,
+          pixelOffset[0], // this is identical for all characters in a label - is used to line up text with background!
+          pixelOffset[1],
+          charInfo.xoffset,
+          -charInfo.yoffset,
         ];
 
-        // INFO breaks before here.. has to be color then
         console.log("Char data to be pushed:", charData);
 
         this.textData.push(...charData);
 
-        xOffset += charInfo.width;
-        xOffset += 10; // INFO spacing between characters
+        xOffset += charInfo.xadvance;
+        prevChar = charInfo.id;
+
         maxWidth = Math.max(maxWidth, xOffset);
         maxHeight = Math.max(maxHeight, charInfo.height);
+
+        maxYOffset = Math.max(maxYOffset, charInfo.yoffset);
+        minYOffset = Math.min(minYOffset, charInfo.yoffset);
       }
+
+      xOffset += 5; // padding
 
       console.log("Final xOffset:", xOffset);
       console.log("Max width:", maxWidth);
       console.log("Max height:", maxHeight);
 
-      // temp test offsets:
-      const pixelOffset: [number, number] = [18, -40];
+      console.log("Max y offset:", maxYOffset);
+      console.log("Min y offset:", minYOffset);
+
+      const yRange = Math.abs(maxYOffset - minYOffset);
+
+      // INFO temp test offsets:
 
       // Add background data
       const bgWidth = maxWidth + padding[0] * 2;
-      const bgHeight = maxHeight + padding[1] * 2;
+      const bgHeight =
+        maxHeight + padding[1] * 2 + yRange * this.globalScaleFactor;
       const bgData = [
         // position is in leaflet coordinates at zoom level 0 shifted to use a central origin
         // cuz leaflet uses central origin - offsets are scaled to zoom 0 and applied in the shader
@@ -832,8 +955,10 @@ class LabeledIconPoints extends IconPoints {
         backgroundColor.g,
         backgroundColor.b,
         backgroundColor.a ?? 1,
-        pixelOffset[0], // offset - pixels
-        pixelOffset[1],
+        pixelOffset[0] - padding[0] * this.globalScaleFactor, // offset in pixels
+        pixelOffset[1] -
+          padding[1] * this.globalScaleFactor +
+          (yRange / 2) * this.globalScaleFactor, // offset in pixels
       ];
       console.log("Background data to be pushed:", bgData);
 
@@ -853,20 +978,31 @@ class LabeledIconPoints extends IconPoints {
     // consider drawing into framebuffer here, then using post processing for AA
     console.log("drawOnCanvas from labeled-icon-points called");
 
+    if (this.mapState) {
+      console.log("getting map snapshot");
+      this.mapState.setMapState();
+    } else {
+      console.log("mapState not yet available");
+    }
+
     // super drawOnCanvas does extras:
     // updates map matrix
     // clears color buffer
     // sets up viewport
+
+    console.log("super.drawOnCanvas");
     super.drawOnCanvas(e);
 
+    console.log("Setting up background state");
     this.setupStateBackground();
 
+    console.log("Drawing backgrounds");
     this.drawBackgrounds();
 
-    console.log("setupStateText");
-    // text drawing does not work yet
+    console.log("Setting up text state");
     this.setupStateText();
-    console.log("drawText");
+
+    console.log("Drawing text");
     this.drawText();
 
     return this;
