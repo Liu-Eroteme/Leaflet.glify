@@ -9,6 +9,8 @@ in vec2 size;
 in vec4 color;
 in vec2 offset;
 
+in float offsetZ;
+
 out vec4 vColor;
 out vec2 vPosition;
 out vec2 vSize;
@@ -22,7 +24,8 @@ void main() {
   vec2 scaledOffset = offset / uScale;
   
   vec4 pos = position + vec4(sizeOffset, 0.0, 0.0) + vec4(scaledOffset, 0.0, 0.0);
-  gl_Position = matrix * pos;
+
+  gl_Position = matrix * vec4(pos.xy, 1.0, 1.0 - offsetZ);
   
   vColor = color;
   vPosition = pos.xy - position.xy - scaledOffset;

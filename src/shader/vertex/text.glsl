@@ -13,12 +13,15 @@ in vec4 instanceColor;
 in vec2 instanceOffset;
 in vec2 instanceTextOffset;
 
+in float offsetZ;
+
 out vec2 vTexCoord;
 out vec4 vColor;
 
 void main() {
-  vec2 pos = ((position * (instanceTexCoord.zw * uGlobalScale) / uScale) + (instancePosition + vec2((instanceOffsetX * uGlobalScale) / uScale, 0.0))) + (instanceOffset / uScale) + ((vec2(instanceTextOffset.x, -instanceTextOffset.y) * uGlobalScale) / uScale);
-  gl_Position = matrix * vec4(pos, 0.0, 1.0);
+  vec2 pos = ((position * (instanceTexCoord.zw * uGlobalScale) / uScale) + (instancePosition + vec2((instanceOffsetX * uGlobalScale) / uScale, 0.0))) + (instanceOffset / uScale) + ((vec2(instanceTextOffset.x, instanceTextOffset.y) * uGlobalScale) / uScale);
+
+  gl_Position = matrix * vec4(pos, 1.0, 1.0 - offsetZ);
 
   vec2 pixelPos = position * instanceTexCoord.zw + instanceTexCoord.xy;
   vTexCoord = (pixelPos + 0.5) / atlasSize;

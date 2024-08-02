@@ -23,22 +23,23 @@ void main() {
   float scaledDistance = roundedBoxSDF(scaledPosition - scaledSize / 2.0, scaledSize / 2.0, (uCornerRadius / 1.5) * uGlobalScale);
   
   // Convert the distance back to world units
-  float distance = scaledDistance / uScale;
+  float dist = scaledDistance / uScale;
   
   float outerEdge = 0.0;
   float innerEdge = -(uOutlineThickness * uGlobalScale) / uScale;
   
   // Adjust the smoothstep range based on the scale
   float smoothRange = 0.5 / uScale;
-  float outerRegion = smoothstep(-smoothRange, smoothRange, distance - outerEdge);
-  float innerRegion = smoothstep(-smoothRange, smoothRange, distance - innerEdge);
+  float outerRegion = smoothstep(-smoothRange, smoothRange, dist - outerEdge);
+  float innerRegion = smoothstep(-smoothRange*5.0, smoothRange*0.75, dist - innerEdge);
   
   vec4 outlineColor = vec4(0.0, 0.0, 0.0, 1.0);
   
   vec4 color = mix(vColor, outlineColor, innerRegion);
   color = mix(color, vec4(0.0, 0.0, 0.0, 0.0), outerRegion);
-  
-  fragColor = color;
+
+  float alpha = smoothstep(-(2.0 / uScale), (2.0 / uScale), -dist);
+  fragColor = vec4(color.rgb, color.a * alpha);
 }
 
 // #version 300 es

@@ -125,15 +125,15 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
 
     this.readyPromise = this.loadTexture(this.settings.iconUrl!)
       .then(() => {
-        console.log("Texture loaded successfully");
+        // console.log("Texture loaded successfully");
         return this.setup();
       })
       .then(() => {
-        console.log("Setup completed successfully");
+        // console.log("Setup completed successfully");
         return this.render();
       })
       .then(() => {
-        console.log("Rendering completed successfully");
+        // console.log("Rendering completed successfully");
       })
       .catch((error) => console.error("Failed to load texture:", error));
   }
@@ -175,11 +175,11 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   }
 
   render(noRedraw?: boolean): this {
-    console.log("Preparing to render IconPoints");
+    // console.log("Preparing to render IconPoints");
 
     this.resetVertices();
 
-    console.log("Vertices reset");
+    // console.log("Vertices reset");
 
     const { canvas, layer, mapMatrix } = this;
 
@@ -188,8 +188,8 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     // do not redraw if optional parameter noRedraw exists and is true
     if (noRedraw) {
       if (noRedraw === true) {
-        console.log("not redrawing yet");
-        console.log("icon-points render preparations complete");
+        // console.log("not redrawing yet");
+        // console.log("icon-points render preparations complete");
         return this;
       }
     }
@@ -197,7 +197,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     // noRedraw is not true, so we will redraw
     layer.redraw();
 
-    console.log("icon-points render preparations complete");
+    // console.log("icon-points render preparations complete");
 
     return this;
   }
@@ -216,13 +216,13 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   }
 
   resetVertices(): this {
-    console.log("Starting resetVertices");
+    // console.log("Starting resetVertices");
 
     this.latLngLookup = {};
     this.allLatLngLookup = [];
     this.vertices = [];
 
-    console.log("Initialized lookups and vertices");
+    // console.log("Initialized lookups and vertices");
 
     const {
       vertices,
@@ -238,15 +238,15 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     } = this;
     const { eachVertex, iconSize, iconAnchor } = settings;
 
-    console.log("Destructured properties", {
-      latitudeKey,
-      longitudeKey,
-      color,
-      opacity,
-      iconSize,
-      iconAnchor,
-      mapCenterPixels,
-    });
+    // console.log("Destructured properties", {
+    //   latitudeKey,
+    //   longitudeKey,
+    //   color,
+    //   opacity,
+    //   iconSize,
+    //   iconAnchor,
+    //   mapCenterPixels,
+    // });
 
     let colorFn: ((i: number, latLng: LatLng | any) => Color.IColor) | null =
       null;
@@ -258,16 +258,16 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     let pixel: Point;
     let key;
 
-    console.log("Declared local variables");
+    // console.log("Declared local variables");
 
     if (!color) {
       console.error("Color is not properly defined");
       throw new Error("color is not properly defined");
     } else if (typeof color === "function") {
       colorFn = color as (i: number, latLng: LatLng) => Color.IColor;
-      console.log("Color function assigned");
+      // console.log("Color function assigned");
     } else {
-      console.log("Using static color", color);
+      // console.log("Using static color", color);
     }
 
     if (!size) {
@@ -275,55 +275,55 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
       throw new Error("size is not properly defined");
     } else if (typeof size === "function") {
       sizeFn = size;
-      console.log("Size function assigned");
+      // console.log("Size function assigned");
     } else {
-      console.log("Using static size", size);
+      // console.log("Using static size", size);
     }
 
     const processVertex = (i: number, feature: any) => {
-      console.log(`Processing vertex ${i}`, feature);
+      // console.log(`Processing vertex ${i}`, feature);
 
       rawLatLng =
         this.dataFormat === "Array" ? data[i] : feature.geometry.coordinates;
-      console.log("Raw LatLng", rawLatLng);
+      // console.log("Raw LatLng", rawLatLng);
 
       key = `${rawLatLng[latitudeKey].toFixed(2)}x${rawLatLng[longitudeKey].toFixed(2)}`;
-      console.log("Generated key", key);
+      // console.log("Generated key", key);
 
       latLng = new LatLng(rawLatLng[latitudeKey], rawLatLng[longitudeKey]);
-      console.log("Created LatLng object", latLng);
+      // console.log("Created LatLng object", latLng);
 
       pixel = map.project(latLng, 0);
-      console.log("Projected to pixel", pixel);
+      // console.log("Projected to pixel", pixel);
 
-      console.log("mapCenterPixels", mapCenterPixels);
+      // console.log("mapCenterPixels", mapCenterPixels);
 
-      console.log(
-        "final pixel x/y: ",
-        pixel.x - mapCenterPixels.x,
-        pixel.y - mapCenterPixels.y
-      );
+      // console.log(
+      //   "final pixel x/y: ",
+      //   pixel.x - mapCenterPixels.x,
+      //   pixel.y - mapCenterPixels.y
+      // );
 
       if (colorFn) {
         chosenColor = colorFn(
           i,
           this.dataFormat === "Array" ? latLng : feature
         );
-        console.log("Color from function", chosenColor);
+        // console.log("Color from function", chosenColor);
       } else {
         chosenColor = color as Color.IColor;
-        console.log("Static color", chosenColor);
+        // console.log("Static color", chosenColor);
       }
 
       chosenColor = { ...chosenColor, a: chosenColor.a ?? opacity ?? 0 };
-      console.log("Final chosen color", chosenColor);
+      // console.log("Final chosen color", chosenColor);
 
       if (sizeFn) {
         chosenSize = sizeFn(i, latLng);
-        console.log("Size from function", chosenSize);
+        // console.log("Size from function", chosenSize);
       } else {
         chosenSize = size as number;
-        console.log("Static size", chosenSize);
+        // console.log("Static size", chosenSize);
       }
 
       vertices.push(
@@ -345,7 +345,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
         iconAnchor![1]
       );
 
-      console.log("Pushed vertex data to vertices array");
+      // console.log("Pushed vertex data to vertices array");
 
       const vertex: IIconVertex = {
         latLng,
@@ -356,30 +356,30 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
         feature: this.dataFormat === "Array" ? rawLatLng : feature,
       };
 
-      console.log("Created vertex object", vertex);
+      // console.log("Created vertex object", vertex);
 
       this.addLookup(vertex);
-      console.log("Added vertex to lookup");
+      // console.log("Added vertex to lookup");
 
       if (eachVertex) {
         eachVertex(vertex);
-        console.log("Called eachVertex function");
+        // console.log("Called eachVertex function");
       }
     };
 
-    console.log("Defined processVertex function");
+    // console.log("Defined processVertex function");
 
     if (this.dataFormat === "Array") {
-      console.log("Processing Array data");
+      // console.log("Processing Array data");
       const max = data.length;
-      console.log(`Data length: ${max}`);
+      // console.log(`Data length: ${max}`);
       for (let i = 0; i < max; i++) {
         processVertex(i, null);
       }
     } else if (this.dataFormat === "GeoJson.FeatureCollection") {
-      console.log("Processing GeoJson.FeatureCollection data");
+      // console.log("Processing GeoJson.FeatureCollection data");
       const max = data.features.length;
-      console.log(`Features length: ${max}`);
+      // console.log(`Features length: ${max}`);
       for (let i = 0; i < max; i++) {
         const feature = data.features[i] as Feature<GeoPoint>;
         processVertex(i, feature);
@@ -388,15 +388,15 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
       console.error("Unknown data format", this.dataFormat);
     }
 
-    console.log("Finished processing all vertices");
-    console.log("Final vertices array length", vertices.length);
-    console.log("Final allLatLngLookup length", this.allLatLngLookup.length);
+    // console.log("Finished processing all vertices");
+    // console.log("Final vertices array length", vertices.length);
+    // console.log("Final allLatLngLookup length", this.allLatLngLookup.length);
 
     return this;
   }
 
   setupState(): this {
-    console.log("icon-points setupState");
+    // console.log("icon-points setupState");
     const { gl, canvas, layer, vertices, mapMatrix } = this;
 
     if (!this.gl) return this;
@@ -448,7 +448,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
-    console.log("Drawing IconPoints on canvas");
+    // console.log("Drawing IconPoints on canvas");
 
     const { gl, canvas, mapMatrix, map, allLatLngLookup, mapCenterPixels } =
       this;
@@ -494,7 +494,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
 
     gl.drawArrays(gl.POINTS, 0, allLatLngLookup.length);
 
-    console.log("drawOnCanvas complete");
+    // console.log("drawOnCanvas complete");
 
     return this;
   }

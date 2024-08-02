@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "test": "jest",
-    "build": "webpack --config webpack.config.js",
+    "build": "webpack --config webpack.config.js --stats=errors-only",
     "coverage": "jest --coverage --coverage-provider v8 && codecov",
     "serve": "webpack-dev-server --config webpack.config.dev.js --open",
     "prepublish-gh-pages": "webpack --config webpack.config.gh-pages.js",

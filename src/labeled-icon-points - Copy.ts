@@ -145,7 +145,7 @@ class LabeledIconPoints extends IconPoints {
 
     // Check for WebGL2 support
     this.isWebGL2 = this.gl instanceof WebGL2RenderingContext;
-    // console.log("isWebGL2:", this.isWebGL2);
+    console.log("isWebGL2:", this.isWebGL2);
 
     this.globalScaleFactor = this.labelSettings.globalScaleFactor ?? 0.5;
 
@@ -154,15 +154,15 @@ class LabeledIconPoints extends IconPoints {
 
   private async initializeLabelRendering(): Promise<void> {
     try {
-      // console.log("awaiting super.ready()");
+      console.log("awaiting super.ready()");
       await super.ready();
-      // console.log("super.ready() resolved");
-      // console.log("initializing label rendering");
+      console.log("super.ready() resolved");
+      console.log("initializing label rendering");
       await this.loadFontAtlas();
       await this.createShaders();
       await this.createBuffers();
       this.isInitialized = true;
-      // console.log("label rendering initialized");
+      console.log("label rendering initialized");
     } catch (error) {
       console.error("Failed to initialize label rendering:", error);
     }
@@ -244,74 +244,74 @@ class LabeledIconPoints extends IconPoints {
     vertexSource: string,
     fragmentSource: string
   ): WebGLProgram {
-    // console.log("Starting shader program creation");
+    console.log("Starting shader program creation");
 
-    // console.log("Creating vertex shader");
+    console.log("Creating vertex shader");
     const vertexShader = this.gl.createShader(this.gl.VERTEX_SHADER);
     if (!vertexShader) {
       console.error("Failed to create vertex shader");
       throw new Error("Failed to create vertex shader");
     }
-    // console.log("Vertex shader created successfully");
+    console.log("Vertex shader created successfully");
 
-    // console.log("Setting vertex shader source");
+    console.log("Setting vertex shader source");
     this.gl.shaderSource(vertexShader, vertexSource);
-    // console.log("Compiling vertex shader");
+    console.log("Compiling vertex shader");
     this.gl.compileShader(vertexShader);
 
-    // console.log("Checking vertex shader compilation status");
+    console.log("Checking vertex shader compilation status");
     if (!this.gl.getShaderParameter(vertexShader, this.gl.COMPILE_STATUS)) {
       const info = this.gl.getShaderInfoLog(vertexShader);
       console.error("Vertex shader compilation failed:", info);
       throw new Error(`Vertex shader compilation failed: ${info}`);
     }
-    // console.log("Vertex shader compiled successfully");
+    console.log("Vertex shader compiled successfully");
 
-    // console.log("Creating fragment shader");
+    console.log("Creating fragment shader");
     const fragmentShader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
     if (!fragmentShader) {
       console.error("Failed to create fragment shader");
       throw new Error("Failed to create fragment shader");
     }
-    // console.log("Fragment shader created successfully");
+    console.log("Fragment shader created successfully");
 
-    // console.log("Setting fragment shader source");
+    console.log("Setting fragment shader source");
     this.gl.shaderSource(fragmentShader, fragmentSource);
-    // console.log("Compiling fragment shader");
+    console.log("Compiling fragment shader");
     this.gl.compileShader(fragmentShader);
 
-    // console.log("Checking fragment shader compilation status");
+    console.log("Checking fragment shader compilation status");
     if (!this.gl.getShaderParameter(fragmentShader, this.gl.COMPILE_STATUS)) {
       const info = this.gl.getShaderInfoLog(fragmentShader);
       console.error("Fragment shader compilation failed:", info);
       throw new Error(`Fragment shader compilation failed: ${info}`);
     }
-    // console.log("Fragment shader compiled successfully");
+    console.log("Fragment shader compiled successfully");
 
-    // console.log("Creating shader program");
+    console.log("Creating shader program");
     const program = this.gl.createProgram();
     if (!program) {
       console.error("Failed to create shader program");
       throw new Error("Failed to create shader program");
     }
-    // console.log("Shader program created successfully");
+    console.log("Shader program created successfully");
 
-    // console.log("Attaching shaders to program");
+    console.log("Attaching shaders to program");
     this.gl.attachShader(program, vertexShader);
     this.gl.attachShader(program, fragmentShader);
 
-    // console.log("Linking shader program");
+    console.log("Linking shader program");
     this.gl.linkProgram(program);
 
-    // console.log("Checking shader program link status");
+    console.log("Checking shader program link status");
     if (!this.gl.getProgramParameter(program, this.gl.LINK_STATUS)) {
       const info = this.gl.getProgramInfoLog(program);
       console.error("Shader program link failed:", info);
       throw new Error(`Failed to link shader program: ${info}`);
     }
-    // console.log("Shader program linked successfully");
+    console.log("Shader program linked successfully");
 
-    // console.log("Shader program creation completed");
+    console.log("Shader program creation completed");
     return program;
   }
 
@@ -350,13 +350,13 @@ class LabeledIconPoints extends IconPoints {
   }
 
   render(): this {
-    // console.log("render call!");
+    console.log("render call!");
     if (this.isInitialized) {
-      // console.log("is initialized");
+      console.log("is initialized");
 
       // call super render with optional property noRedraw = false to disable redraw call
       super.render(false);
-      // console.log("super render called");
+      console.log("super render called");
 
       // setup data for labels
       // needs to be called after super render since super render calls resetVertices and that sets up the coordinates
@@ -372,7 +372,7 @@ class LabeledIconPoints extends IconPoints {
 
   private setupStateBackground(): this {
     const { gl } = this;
-    // console.log("setupStateBackground called");
+    console.log("setupStateBackground called");
 
     // sanity check
     if (!this.backgroundShader) return this;
@@ -383,7 +383,7 @@ class LabeledIconPoints extends IconPoints {
     gl.useProgram(this.backgroundShader!);
 
     // set up buffer
-    // console.log("Binding backgroundBuffer");
+    console.log("Binding backgroundBuffer");
     gl.bindBuffer(gl.ARRAY_BUFFER, this.backgroundBuffer);
     gl.bufferData(
       gl.ARRAY_BUFFER,
@@ -455,7 +455,7 @@ class LabeledIconPoints extends IconPoints {
 
   private setupStateText(): this {
     const { gl } = this;
-    // console.log("setupStateText called");
+    console.log("setupStateText called");
 
     // sanity checks
     if (!this.labelShader) return this;
@@ -466,7 +466,7 @@ class LabeledIconPoints extends IconPoints {
     gl.useProgram(this.labelShader!);
 
     // set up glyqp quad buffer
-    // console.log("Binding glyphQuad buffer");
+    console.log("Binding glyphQuad buffer");
     gl.bindBuffer(gl.ARRAY_BUFFER, this.glyphQuad!); // data never changes
 
     // set up glyph quad attributes
@@ -480,7 +480,7 @@ class LabeledIconPoints extends IconPoints {
     gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 8, 0);
 
     // set up buffer
-    // console.log("Binding labelInstanceData buffer");
+    console.log("Binding labelInstanceData buffer");
     gl.bindBuffer(gl.ARRAY_BUFFER, this.labelInstanceData);
     gl.bufferData(
       gl.ARRAY_BUFFER,
@@ -830,47 +830,40 @@ class LabeledIconPoints extends IconPoints {
       : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
     features.forEach((feature, index) => {
       const text = this.getLabelText(feature, index);
-      if (text === undefined) {
-        return;
-      }
       count += text.length;
     });
     return count;
   }
 
   private updateLabelInstanceData(): this {
-    // console.log("Starting updateLabelInstanceData");
+    console.log("Starting updateLabelInstanceData");
 
     this.textData = [];
     this.backgroundData = [];
 
     if (!this.labelInstanceData || !this.backgroundBuffer) {
-      // console.log("labelInstanceData or backgroundBuffer is null, returning");
+      console.log("labelInstanceData or backgroundBuffer is null, returning");
       return this;
     }
 
-    // console.log("Initialized textData and backgroundData arrays");
+    console.log("Initialized textData and backgroundData arrays");
 
     const features = Array.isArray(this.settings.data)
       ? this.settings.data
       : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
 
-    // console.log("Features data:", features);
-    // console.log("Number of features:", features.length);
-
-    let zOffset = 0.0;
-
-    let increment = 0.000000000069;
+    console.log("Features data:", features);
+    console.log("Number of features:", features.length);
 
     features.forEach((feature, index) => {
-      // console.log(`Processing feature ${index}:`, feature);
+      console.log(`Processing feature ${index}:`, feature);
 
-      // console.log("calling getLabelText with index:", index);
+      console.log("calling getLabelText with index:", index);
       const text = this.getLabelText(
         feature as ILabeledFeature | number[],
         index
       );
-      // console.log("Label text:", text);
+      console.log("Label text:", text);
 
       const rawLatLng = this.allLatLngLookup[index].latLng;
       const pixel = this.map.project(rawLatLng, 0);
@@ -879,29 +872,29 @@ class LabeledIconPoints extends IconPoints {
         pixel.y - this.mapCenterPixels.y,
       ];
 
-      // console.log("Calculated label position:", position);
+      console.log("Calculated label position:", position);
 
       const labelColor = this.getLabelColor(
         feature as ILabeledFeature | number[]
       );
-      // console.log("Label color:", labelColor);
+      console.log("Label color:", labelColor);
 
       const backgroundColor = this.getLabelBackgroundColor(
         feature as ILabeledFeature | number[]
       );
-      // console.log("Background color:", backgroundColor);
+      console.log("Background color:", backgroundColor);
 
       const padding = this.getLabelBackgroundPadding(
         feature as ILabeledFeature | number[]
       );
       // const padding: [number, number] = [10, 10];
-      // console.log("Background padding:", padding);
+      console.log("Background padding:", padding);
 
       const pixelOffset = this.getLabelOffset(
         feature as ILabeledFeature | number[]
       );
       // const pixelOffset: [number, number] = [25, -40];
-      // console.log("Label offset:", pixelOffset);
+      console.log("Label offset:", pixelOffset);
 
       // accumulators
       let xOffset = padding[0] * this.globalScaleFactor; // initial xOffset for text, padding
@@ -917,16 +910,13 @@ class LabeledIconPoints extends IconPoints {
 
       let prevChar: number | null = null;
 
-      const textZOffset: number = zOffset + 2 * increment;
-
-      if (text === undefined) {
-        return;
-      }
+      let zOffset = 0.0;
+      let increment = 0.0000001;
 
       // char loop
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
-        // console.log(`Processing character: ${char}`);
+        console.log(`Processing character: ${char}`);
 
         // TODO change any type
         const charInfo = this.fontAtlas.chars.find((c: any) => c.char === char);
@@ -939,7 +929,7 @@ class LabeledIconPoints extends IconPoints {
 
         // TODO add " " space handling
         if (!charInfo) {
-          // console.log(`No char info for: ${char}, skipping`);
+          console.log(`No char info for: ${char}, skipping`);
           continue;
         } else {
           if (prevChar) {
@@ -950,7 +940,7 @@ class LabeledIconPoints extends IconPoints {
               xOffset += kerning.amount;
             }
           }
-          // console.log("Char info:", charInfo);
+          console.log("Char info:", charInfo);
         }
 
         const charData = [
@@ -971,10 +961,10 @@ class LabeledIconPoints extends IconPoints {
           pixelOffset[1],
           charInfo.xoffset,
           charInfo.yoffset,
-          textZOffset,
+          zOffset + increment,
         ];
 
-        // console.log("Char data to be pushed:", charData);
+        console.log("Char data to be pushed:", charData);
 
         this.textData.push(...charData);
 
@@ -991,12 +981,12 @@ class LabeledIconPoints extends IconPoints {
 
       xOffset += padding[0] * this.globalScaleFactor; // final xOffset for text, padding
 
-      // console.log("Final xOffset:", xOffset);
-      // console.log("Max width:", maxWidth);
-      // console.log("Max height:", maxHeight);
+      console.log("Final xOffset:", xOffset);
+      console.log("Max width:", maxWidth);
+      console.log("Max height:", maxHeight);
 
-      // console.log("Max y offset:", maxYOffset);
-      // console.log("Min y offset:", minYOffset);
+      console.log("Max y offset:", maxYOffset);
+      console.log("Min y offset:", minYOffset);
 
       const yRange = Math.abs(maxYOffset - minYOffset);
 
@@ -1034,7 +1024,7 @@ class LabeledIconPoints extends IconPoints {
           (yRange / 2) * this.globalScaleFactor, // offset in pixels
         zOffset,
       ];
-      // console.log("Background data to be pushed:", bgData);
+      console.log("Background data to be pushed:", bgData);
 
       this.backgroundData.push(...bgData);
 
@@ -1044,14 +1034,13 @@ class LabeledIconPoints extends IconPoints {
       // t = 0: text offset: 1i, background offset: 0i,
       // t = 1: text offset: 3i, background offset: 2i,
       // ...
-      const incrementMultiple: number = increment * 4;
-      zOffset = zOffset + incrementMultiple;
+      zOffset += 2 * increment;
     });
 
-    // console.log("Final textData length:", this.textData.length);
-    // console.log("Final backgroundData length:", this.backgroundData.length);
+    console.log("Final textData length:", this.textData.length);
+    console.log("Final backgroundData length:", this.backgroundData.length);
 
-    // console.log("Finished updateLabelInstanceData");
+    console.log("Finished updateLabelInstanceData");
 
     return this;
   }
@@ -1059,13 +1048,13 @@ class LabeledIconPoints extends IconPoints {
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     // TODO
     // consider drawing into framebuffer here, then using post processing for AA
-    // console.log("drawOnCanvas from labeled-icon-points called");
+    console.log("drawOnCanvas from labeled-icon-points called");
 
     if (this.mapState) {
-      // console.log("getting map snapshot");
+      console.log("getting map snapshot");
       this.mapState.setMapState();
     } else {
-      // console.log("mapState not yet available");
+      console.log("mapState not yet available");
     }
 
     // super drawOnCanvas does extras:
@@ -1073,36 +1062,40 @@ class LabeledIconPoints extends IconPoints {
     // clears color buffer
     // sets up viewport
 
-    // console.log("super.drawOnCanvas");
-    super.drawOnCanvas(e);
-
     if (this.gl) {
+      //
+
+      console.log("super.drawOnCanvas");
+      super.drawOnCanvas(e);
+
       // INFO temp TESTING
       this.gl.depthMask(true);
       this.gl.enable(this.gl.DEPTH_TEST);
       this.gl.depthFunc(this.gl.LEQUAL);
-      // this.gl.depthFunc(this.gl.LESS);
       this.gl.clear(this.gl.DEPTH_BUFFER_BIT);
-    }
 
-    // console.log("Setting up background state");
-    this.setupStateBackground();
+      console.log("Setting up background state");
+      this.setupStateBackground();
 
-    // console.log("Drawing backgrounds");
-    this.drawBackgrounds();
+      console.log("Drawing backgrounds");
+      this.drawBackgrounds();
 
-    // console.log("Setting up text state");
-    this.setupStateText();
+      console.log("Setting up text state");
+      this.setupStateText();
 
-    // console.log("Drawing text");
-    this.drawText();
+      console.log("Drawing text");
+      this.drawText();
 
-    if (this.gl) {
       // INFO temp TESTING
       this.gl.disable(this.gl.DEPTH_TEST);
-    }
 
-    return this;
+      return this;
+
+      //
+    } else {
+      console.log("No gl context, returning");
+      return this;
+    }
   }
 
   // private calculateLabelPosition(
@@ -1206,11 +1199,11 @@ class LabeledIconPoints extends IconPoints {
   }
 
   setLikuNumberArray(likuNumberArray: number[]) {
-    // console.log("Setting likuNumberArray !!!!!");
+    console.log("Setting likuNumberArray !!!!!");
     try {
       this.likuNumberArray = likuNumberArray.map((number) => number.toString());
     } catch {
-      // console.log("Error in setLikuNumberArray");
+      console.log("Error in setLikuNumberArray");
     }
 
     return this;
@@ -1218,7 +1211,7 @@ class LabeledIconPoints extends IconPoints {
 
   // INFO error might be from here?
   resetVertices(): this {
-    // console.log("Resetting base class vertices");
+    console.log("Resetting base class vertices");
     super.resetVertices();
     return this;
   }
