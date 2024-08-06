@@ -21,7 +21,7 @@ out vec4 vColor;
 void main() {
   vec2 pos = ((position * (instanceTexCoord.zw * uGlobalScale) / uScale) + (instancePosition + vec2((instanceOffsetX * uGlobalScale) / uScale, 0.0))) + (instanceOffset / uScale) + ((vec2(instanceTextOffset.x, instanceTextOffset.y) * uGlobalScale) / uScale);
 
-  gl_Position = matrix * vec4(pos, 1.0, 1.0 - offsetZ);
+  gl_Position = matrix * vec4(pos, 1.0  - offsetZ, 1.0);
 
   vec2 pixelPos = position * instanceTexCoord.zw + instanceTexCoord.xy;
   vTexCoord = (pixelPos + 0.5) / atlasSize;

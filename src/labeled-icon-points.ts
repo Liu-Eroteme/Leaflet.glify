@@ -108,6 +108,8 @@ class LabeledIconPoints extends IconPoints {
   private isInitialized: boolean = false;
   private initPromise: Promise<void>; // not doing anything with this yet, but should...
 
+  private totalGlyphs: number;
+
   private textData: number[] = [];
   private backgroundData: number[] = [];
 
@@ -149,6 +151,8 @@ class LabeledIconPoints extends IconPoints {
 
     this.globalScaleFactor = this.labelSettings.globalScaleFactor ?? 0.5;
 
+    this.totalGlyphs = 0;
+
     this.initPromise = this.initializeLabelRendering();
   }
 
@@ -161,6 +165,16 @@ class LabeledIconPoints extends IconPoints {
       await this.loadFontAtlas();
       await this.createShaders();
       await this.createBuffers();
+
+      // TEST
+
+      this.gl.depthMask(true);
+      this.gl.depthFunc(this.gl.LEQUAL);
+      // this.gl.depthFunc(this.gl.LESS);
+      this.gl.enable(this.gl.DEPTH_TEST);
+
+      // TEST
+
       this.isInitialized = true;
       // console.log("label rendering initialized");
     } catch (error) {
@@ -398,17 +412,17 @@ class LabeledIconPoints extends IconPoints {
       "position"
     );
     gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 52, 0);
+    gl.vertexAttribPointer(positionLocation, 4, gl.FLOAT, false, 60, 0);
 
     // size attribute
     const sizeLocation = gl.getAttribLocation(this.backgroundShader!, "size");
     gl.enableVertexAttribArray(sizeLocation);
-    gl.vertexAttribPointer(sizeLocation, 2, gl.FLOAT, false, 52, 16);
+    gl.vertexAttribPointer(sizeLocation, 2, gl.FLOAT, false, 60, 16);
 
     // color attribute
     const colorLocation = gl.getAttribLocation(this.backgroundShader!, "color");
     gl.enableVertexAttribArray(colorLocation);
-    gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 52, 24);
+    gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 60, 24);
 
     // offset attribute
     const offsetLocation = gl.getAttribLocation(
@@ -416,7 +430,7 @@ class LabeledIconPoints extends IconPoints {
       "offset"
     );
     gl.enableVertexAttribArray(offsetLocation);
-    gl.vertexAttribPointer(offsetLocation, 2, gl.FLOAT, false, 52, 40);
+    gl.vertexAttribPointer(offsetLocation, 2, gl.FLOAT, false, 60, 40);
 
     // Zoffset attribute
     const offsetZLocation = gl.getAttribLocation(
@@ -424,7 +438,15 @@ class LabeledIconPoints extends IconPoints {
       "offsetZ"
     );
     gl.enableVertexAttribArray(offsetZLocation);
-    gl.vertexAttribPointer(offsetZLocation, 1, gl.FLOAT, false, 52, 48);
+    gl.vertexAttribPointer(offsetZLocation, 1, gl.FLOAT, false, 60, 48);
+
+    // rangeXY attribute
+    const rangeXYLocation = gl.getAttribLocation(
+      this.backgroundShader!,
+      "rangeXY"
+    );
+    gl.enableVertexAttribArray(rangeXYLocation);
+    gl.vertexAttribPointer(rangeXYLocation, 2, gl.FLOAT, false, 60, 52);
 
     // set up instanced rendering
 
@@ -789,8 +811,6 @@ class LabeledIconPoints extends IconPoints {
 
     if (!this.gl) return this;
 
-    const glyphs: number = this.getTotalGlyphCount();
-
     // WARN debug
     // console.log("Program info log:", gl.getProgramInfoLog(this.labelShader!));
     // console.log("Viewport:", gl.getParameter(gl.VIEWPORT));
@@ -813,29 +833,14 @@ class LabeledIconPoints extends IconPoints {
 
     if (this.isWebGL2) {
       const gl2 = gl as WebGL2RenderingContext;
-      gl2.drawArraysInstanced(gl2.TRIANGLES, 0, 6, glyphs);
+      gl2.drawArraysInstanced(gl2.TRIANGLES, 0, 6, this.totalGlyphs);
     } else {
       const ext = gl.getExtension("ANGLE_instanced_arrays");
       if (!ext) {
         throw new Error("ANGLE_instanced_arrays extension not supported");
       }
-      ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, glyphs);
+      ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, this.totalGlyphs);
     }
-  }
-
-  private getTotalGlyphCount(): number {
-    let count = 0;
-    const features = Array.isArray(this.settings.data)
-      ? this.settings.data
-      : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
-    features.forEach((feature, index) => {
-      const text = this.getLabelText(feature, index);
-      if (text === undefined) {
-        return;
-      }
-      count += text.length;
-    });
-    return count;
   }
 
   private updateLabelInstanceData(): this {
@@ -843,6 +848,7 @@ class LabeledIconPoints extends IconPoints {
 
     this.textData = [];
     this.backgroundData = [];
+    this.totalGlyphs = 0;
 
     if (!this.labelInstanceData || !this.backgroundBuffer) {
       // console.log("labelInstanceData or backgroundBuffer is null, returning");
@@ -858,11 +864,10 @@ class LabeledIconPoints extends IconPoints {
     // console.log("Features data:", features);
     // console.log("Number of features:", features.length);
 
-    let zOffset = 0.0;
-
-    let increment = 0.000000000069;
+    const increment = this.incrementZ;
 
     features.forEach((feature, index) => {
+      const zOffset = index * (4 * increment);
       // console.log(`Processing feature ${index}:`, feature);
 
       // console.log("calling getLabelText with index:", index);
@@ -978,6 +983,9 @@ class LabeledIconPoints extends IconPoints {
 
         this.textData.push(...charData);
 
+        // increment total glyph counter
+        this.totalGlyphs++;
+
         prevChar = charInfo.id;
 
         xOffset += charInfo.xadvance;
@@ -989,7 +997,7 @@ class LabeledIconPoints extends IconPoints {
         minYOffset = Math.min(minYOffset, charInfo.yoffset);
       }
 
-      xOffset += padding[0] * this.globalScaleFactor; // final xOffset for text, padding
+      // xOffset += padding[0] * this.globalScaleFactor; // final xOffset for text, padding
 
       // console.log("Final xOffset:", xOffset);
       // console.log("Max width:", maxWidth);
@@ -1005,34 +1013,34 @@ class LabeledIconPoints extends IconPoints {
       // TODO move calc into vertex shader
       // WARN seriously, this is gonna eat up a lot of time here
       // doing what is basically a bunch of pow3 operations
-      const bgWidth =
-        maxWidth +
-        padding[0] * this.globalScaleFactor * 2 +
-        xRange * this.globalScaleFactor;
-      const bgHeight =
-        maxHeight +
-        padding[1] * this.globalScaleFactor * 2 +
-        yRange * this.globalScaleFactor;
+      // const bgWidth =
+      //   maxWidth +
+      //   padding[0] * this.globalScaleFactor * 2 +
+      //   xRange * this.globalScaleFactor;
+
+      // const bgHeight =
+      //   maxHeight +
+      //   padding[1] * this.globalScaleFactor * 2 +
+      //   yRange * this.globalScaleFactor;
+
       const bgData = [
         // position is in leaflet coordinates at zoom level 0 shifted to use a central origin
         // cuz leaflet uses central origin - offsets are scaled to zoom 0 and applied in the shader
-        position[0], // - padding[0]  - add padding to pixel offset?
-        position[1], // - padding[1],
-        0,
-        0, // filling up the vec4 position im using to appease the matmul gods
-        bgWidth,
-        bgHeight, // size - pixels
-        backgroundColor.r, // color
+        position[0],
+        position[1],
+        padding[0],
+        padding[1],
+        maxWidth,
+        maxHeight,
+        backgroundColor.r,
         backgroundColor.g,
         backgroundColor.b,
         backgroundColor.a ?? 1,
-        pixelOffset[0] -
-          (padding[0] / (1 / this.globalScaleFactor)) * this.globalScaleFactor +
-          (xRange / 2) * this.globalScaleFactor, // offset in pixels // TODO double check this looks wrong, text isnt perfectly centered
-        pixelOffset[1] -
-          (padding[1] / (1 / this.globalScaleFactor)) * this.globalScaleFactor +
-          (yRange / 2) * this.globalScaleFactor, // offset in pixels
+        pixelOffset[0],
+        pixelOffset[1],
         zOffset,
+        xRange,
+        yRange,
       ];
       // console.log("Background data to be pushed:", bgData);
 
@@ -1044,8 +1052,9 @@ class LabeledIconPoints extends IconPoints {
       // t = 0: text offset: 1i, background offset: 0i,
       // t = 1: text offset: 3i, background offset: 2i,
       // ...
-      const incrementMultiple: number = increment * 4;
-      zOffset = zOffset + incrementMultiple;
+      // moved to const scaled by index
+      // const incrementMultiple: number = increment * 4;
+      // zOffset = zOffset + incrementMultiple;
     });
 
     // console.log("Final textData length:", this.textData.length);
@@ -1068,6 +1077,12 @@ class LabeledIconPoints extends IconPoints {
       // console.log("mapState not yet available");
     }
 
+    if (this.gl) {
+      // INFO temp TESTING
+      // this.gl.enable(this.gl.DEPTH_TEST);
+      this.gl.clear(this.gl.DEPTH_BUFFER_BIT);
+    }
+
     // super drawOnCanvas does extras:
     // updates map matrix
     // clears color buffer
@@ -1075,15 +1090,6 @@ class LabeledIconPoints extends IconPoints {
 
     // console.log("super.drawOnCanvas");
     super.drawOnCanvas(e);
-
-    if (this.gl) {
-      // INFO temp TESTING
-      this.gl.depthMask(true);
-      this.gl.enable(this.gl.DEPTH_TEST);
-      this.gl.depthFunc(this.gl.LEQUAL);
-      // this.gl.depthFunc(this.gl.LESS);
-      this.gl.clear(this.gl.DEPTH_BUFFER_BIT);
-    }
 
     // console.log("Setting up background state");
     this.setupStateBackground();
@@ -1097,10 +1103,10 @@ class LabeledIconPoints extends IconPoints {
     // console.log("Drawing text");
     this.drawText();
 
-    if (this.gl) {
-      // INFO temp TESTING
-      this.gl.disable(this.gl.DEPTH_TEST);
-    }
+    // if (this.gl) {
+    //   // INFO temp TESTING
+    //   this.gl.disable(this.gl.DEPTH_TEST);
+    // }
 
     return this;
   }
@@ -1205,12 +1211,13 @@ class LabeledIconPoints extends IconPoints {
     return this.render();
   }
 
-  setLikuNumberArray(likuNumberArray: number[]) {
+  // TODO switch to proper input data types omg
+  setLikuNumberArray(likuNumberArray: string[]) {
     // console.log("Setting likuNumberArray !!!!!");
     try {
-      this.likuNumberArray = likuNumberArray.map((number) => number.toString());
+      this.likuNumberArray = likuNumberArray;
     } catch {
-      // console.log("Error in setLikuNumberArray");
+      // console.error("Error in setLikuNumberArray");
     }
 
     return this;

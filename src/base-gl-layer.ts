@@ -418,6 +418,14 @@ export abstract class BaseGlLayer<
     return this.render();
   }
 
+  updateAll(features: number[][]): this {
+    // WARN TEMP
+    // TODO FIX
+    // console.log("updateAll CALLED! features:", features);
+    this.settings.data = features;
+    return this.render();
+  }
+
   getBuffer(name: string): WebGLBuffer {
     if (!this.buffers[name]) {
       const buffer = this.gl.createBuffer();

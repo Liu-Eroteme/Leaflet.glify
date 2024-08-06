@@ -24,6 +24,7 @@ export interface IIconPointsSettings extends IBaseGlLayerSettings {
   iconUrl: string;
   iconSize: number;
   iconAnchor?: [number, number];
+  incrementZ?: number;
 }
 
 const defaults: Partial<IIconPointsSettings> = {
@@ -55,6 +56,11 @@ const defaults: Partial<IIconPointsSettings> = {
       start: 7,
       size: 2,
     },
+    offsetZ: {
+      type: "FLOAT",
+      start: 9,
+      size: 1,
+    },
   },
 };
 
@@ -73,7 +79,7 @@ export interface IIconVertex {
 export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   static defaults = defaults;
   static maps: Map[] = [];
-  bytes = 9; // 2 for vertex, 4 for color, 1 for size, 2 for texture coordinates.. ?
+  bytes = 10; // 2 for vertex, 4 for color, 1 for size, 2 for texture coordinates.. ?
   latLngLookup: {
     [key: string]: IIconVertex[];
   } = {};
@@ -88,6 +94,8 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
 
   textureWidth: number = 0;
   textureHeight: number = 0;
+
+  incrementZ = 0.00001; // default increment for z-index
 
   private readyPromise: Promise<any>;
 
@@ -105,6 +113,10 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     super(settings);
 
     this.settings = { ...defaults, ...settings };
+
+    if (this.settings.incrementZ) {
+      this.incrementZ = this.settings.incrementZ;
+    }
 
     this.active = true;
 
@@ -127,6 +139,11 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
       .then(() => {
         // console.log("Texture loaded successfully");
         return this.setup();
+      })
+      .then(() => {
+        this.gl.enable(this.gl.DEPTH_TEST);
+        this.gl.depthMask(true);
+        this.gl.depthFunc(this.gl.LEQUAL);
       })
       .then(() => {
         // console.log("Setup completed successfully");
@@ -283,6 +300,8 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     const processVertex = (i: number, feature: any) => {
       // console.log(`Processing vertex ${i}`, feature);
 
+      const zOffset = i * (4 * this.incrementZ);
+
       rawLatLng =
         this.dataFormat === "Array" ? data[i] : feature.geometry.coordinates;
       // console.log("Raw LatLng", rawLatLng);
@@ -342,7 +361,8 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
 
         // texture coordinates
         iconAnchor![0],
-        iconAnchor![1]
+        iconAnchor![1],
+        zOffset
       );
 
       // console.log("Pushed vertex data to vertices array");
