@@ -3,6 +3,7 @@ import { Feature, FeatureCollection, GeoJsonProperties, Point } from "geojson";
 
 declare module "leaflet" {
   namespace glify {
+    // NOTE: Core color interface used throughout the library
     interface IColor {
       r: number;
       g: number;
@@ -10,6 +11,7 @@ declare module "leaflet" {
       a?: number;
     }
 
+    // NOTE: Base options interface for all GL layers
     interface IGlifyLayerOptions {
       map: L.Map;
       data: [number, number][] | GeoJSON.FeatureCollection<GeoJSON.Point>;
@@ -17,18 +19,63 @@ declare module "leaflet" {
       color?: IColor | ((index: number, point: [number, number]) => IColor);
       opacity?: number;
       className?: string;
-      vertexShaderSource?: string;
-      fragmentShaderSource?: string;
+      vertexShaderSource?: string | (() => string);
+      fragmentShaderSource?: string | (() => string);
       pane?: string;
       preserveDrawingBuffer?: boolean;
+      longitudeKey?: number;
+      latitudeKey?: number;
+      shaderVariables?: {
+        [name: string]: {
+          type: "FLOAT";
+          start: number;
+          size: number;
+          normalize: boolean;
+          stride?: number;
+        };
+      };
     }
 
-    interface PointsOptions extends IGlifyLayerOptions {}
+    // NOTE: Event handling types
+    type EventCallback = (e: L.LeafletMouseEvent, feature: any) => boolean | void;
+    type SetupHoverCallback = (map: L.Map, hoverWait?: number, immediate?: false) => void;
+
+    // NOTE: Canvas overlay drawing event interface
+    interface ICanvasOverlayDrawEvent {
+      canvas: HTMLCanvasElement;
+      bounds: L.LatLngBounds;
+      offset: L.Point;
+      scale: number;
+      size: L.Point;
+      zoomScale: number;
+      zoom: number;
+      timestamp?: number;
+    }
+
+    // NOTE: Layer-specific options interfaces
+    interface PointsOptions extends IGlifyLayerOptions {
+      sensitivity?: number;
+      sensitivityHover?: number;
+      click?: EventCallback;
+      hover?: EventCallback;
+      hoverOff?: EventCallback;
+      setupClick?: (map: L.Map) => void;
+      setupHover?: SetupHoverCallback;
+      hoverWait?: number;
+    }
 
     interface IconPointsOptions extends IGlifyLayerOptions {
       iconUrl: string;
       iconSize: number;
       iconAnchor?: [number, number];
+      sensitivity?: number;
+      sensitivityHover?: number;
+      click?: EventCallback;
+      hover?: EventCallback;
+      hoverOff?: EventCallback;
+      setupClick?: (map: L.Map) => void;
+      setupHover?: SetupHoverCallback;
+      hoverWait?: number;
     }
 
     interface LabeledIconPointsOptions extends IconPointsOptions {
