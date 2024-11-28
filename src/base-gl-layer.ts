@@ -32,12 +32,40 @@ export type SetupHoverCallback = (
   immediate?: false
 ) => void;
 
+// NOTE: WebGL context configuration
+export interface IWebGLContextOptions {
+  preserveDrawingBuffer?: boolean;
+  antialias?: boolean;
+  alpha?: boolean;
+  depth?: boolean;
+  stencil?: boolean;
+}
+
+// NOTE: WebGL buffer configuration
+export interface IGlBufferConfig {
+  name: string;
+  size: number;
+  type: number;
+  normalize: boolean;
+  stride: number;
+  offset: number;
+}
+
+// NOTE: WebGL shader configuration
+export interface IGlShaderConfig {
+  vertexSource: string;
+  fragmentSource: string;
+  attributes: { [key: string]: IGlBufferConfig };
+  uniforms: string[];
+}
+
 export interface IBaseGlLayerSettings {
-  data: any;
+  data: GeoJSON.FeatureCollection | number[][];
   longitudeKey: number;
   latitudeKey: number;
   pane: string;
   map: Map;
+  contextOptions?: IWebGLContextOptions;
   shaderVariables?: {
     [name: string]: IShaderVariable;
   };
@@ -71,7 +99,7 @@ export abstract class BaseGlLayer<
 > {
   bytes = 0;
   active: boolean;
-  fragmentShader: any;
+  fragmentShader: WebGLShader | null;
   canvas: HTMLCanvasElement;
   gl: WebGLRenderingContext | WebGL2RenderingContext;
   layer: CanvasOverlay;
@@ -80,9 +108,19 @@ export abstract class BaseGlLayer<
   program: WebGLProgram | null;
   settings: Partial<IBaseGlLayerSettings>;
   vertexShader: WebGLShader | null;
-  vertices: any;
-  vertexLines: any;
+  vertices: Float32Array;
+  vertexLines: Float32Array;
   mapCenterPixels: IPixel;
+  
+  protected readonly glState: {
+    isContextLost: boolean;
+    lastFrameTime: number;
+    frameCount: number;
+  } = {
+    isContextLost: false,
+    lastFrameTime: 0,
+    frameCount: 0
+  };
 
   buffers: { [name: string]: WebGLBuffer } = {};
   attributeLocations: { [name: string]: number } = {};
