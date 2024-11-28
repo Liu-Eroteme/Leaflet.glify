@@ -1,7 +1,8 @@
 // INFO: Enhanced Canvas Overlay implementation for Leaflet with WebGL support
 // NOTE: Originally based on http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOverlay.js
 // WARN: Custom modifications for WebGL rendering and performance optimizations
- Generic  Canvas Overlay for leaflet,
+
+ /* Generic  Canvas Overlay for leaflet,
  Stanislav Sumbera, April , 2014
 
  - added userDrawFunc that is called when Canvas need to be redrawn
@@ -39,9 +40,34 @@ export interface ICanvasOverlayDrawEvent {
   timestamp?: number; // TODO: Add timestamp for animation support
 }
 
-// NOTE: Function signatures for drawing and redraw callbacks
+// NOTE: Core types for canvas overlay functionality
 export type IUserDrawFunc = (event: ICanvasOverlayDrawEvent) => void;
 export type RedrawCallback = (instance: CanvasOverlay) => Promise<void> | void;
+
+// NOTE: Canvas overlay specific options
+export interface ICanvasOverlayOptions extends LayerOptions {
+  pane?: string;
+  animated?: boolean;
+  updateWhenIdle?: boolean;
+  updateWhenZooming?: boolean;
+}
+
+// NOTE: Internal state tracking interfaces
+export interface ICanvasState {
+  frame: number | null;
+  isDragging: boolean;
+  isAnimated: boolean;
+  canvas: HTMLCanvasElement | undefined;
+}
+
+// NOTE: Event handling types for canvas overlay
+export interface ICanvasEventHandlers {
+  onAdd?: (map: Map) => void;
+  onRemove?: (map: Map) => void;
+  onZoom?: (e: ZoomAnimEvent) => void;
+  onResize?: (e: ResizeEvent) => void;
+  onReset?: () => void;
+}
 
 // IDEA: Consider adding render statistics interface
 export interface IRenderStats {

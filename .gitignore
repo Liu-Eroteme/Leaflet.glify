@@ -10,3 +10,4 @@ yarn.lock
 __coverage__
 .gh-pages
 .aider*
+.env
