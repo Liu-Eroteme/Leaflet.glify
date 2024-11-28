@@ -1,6 +1,5 @@
 import * as L from "leaflet";
-import { Feature, FeatureCollection, GeoJsonProperties } from "geojson";
-import { GeoPoint } from "../src/types";
+import { Feature, FeatureCollection, GeoJsonProperties, Point } from "geojson";
 
 declare module "leaflet" {
   namespace glify {
@@ -37,7 +36,7 @@ declare module "leaflet" {
       labelFont?: string;
       labelColor?: IColor;
       labelBackgroundColor?: IColor;
-      labelText?: (feature?: Feature<GeoPoint, GeoJsonProperties> | number[], index?: number) => string;
+      labelText?: (feature?: Feature<Point, GeoJsonProperties> | number[], index?: number) => string;
       labelBackgroundPadding?: [number, number];
       labelBackgroundCornerRadius?: number;
       labelBackgroundOutlineThickness?: number;
