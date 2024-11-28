@@ -5,6 +5,7 @@ import {
   FeatureCollection,
   Point as GeoPoint,
   GeoJsonProperties,
+  Geometry,
 } from "geojson";
 import { LeafletMouseEvent, Map, LatLng } from "leaflet";
 
@@ -80,20 +81,6 @@ interface ILabeledIconPointsSettings extends IIconPointsSettings {
   labelTextFragmentShaderSource: () => string;
 }
 
-// TODO ?
-interface ILabeledFeature extends Feature<GeoPoint> {
-  properties: {
-    labelText?: string;
-    labelOffset?: [number, number];
-    labelFont?: string;
-    labelColor?: IColor;
-    labelBackgroundColor?: IColor;
-    labelBackgroundPadding?: [number, number];
-    labelBackgroundCornerRadius?: number;
-    labelBackgroundOutlineThickness?: number;
-  } & GeoJsonProperties;
-}
-
 class LabeledIconPoints extends IconPoints {
   private isWebGL2: boolean;
   private labelShader: WebGLProgram | null = null;
@@ -122,11 +109,6 @@ class LabeledIconPoints extends IconPoints {
   // WARN TEMP
   // OPTIONS OPTIONS!!
   private globalScaleFactor: number;
-
-  // TODO TEMP
-  // WARN TEMP
-  // PROPERLY USE THE FEATURE COLLECTION
-  private likuNumberArray: string[] = [];
 
   constructor(settings: ILabeledIconPointsSettings) {
     super(settings);
@@ -859,7 +841,8 @@ class LabeledIconPoints extends IconPoints {
 
     const features = Array.isArray(this.settings.data)
       ? this.settings.data
-      : (this.settings.data as FeatureCollection<GeoPoint>).features || [];
+      : (this.settings.data as FeatureCollection<Geometry, GeoJsonProperties>)
+          .features || [];
 
     // console.log("Features data:", features);
     // console.log("Number of features:", features.length);
@@ -868,16 +851,21 @@ class LabeledIconPoints extends IconPoints {
 
     features.forEach((feature, index) => {
       const zOffset = index * (4 * increment);
-      // console.log(`Processing feature ${index}:`, feature);
+      console.log(`Processing feature ${index}:`, feature);
 
       // console.log("calling getLabelText with index:", index);
       const text = this.getLabelText(
-        feature as ILabeledFeature | number[],
+        feature as Feature<GeoPoint> | number[],
         index
       );
       // console.log("Label text:", text);
+      console.log("get latlong");
 
+      // INFO THIS IS DUMB!
       const rawLatLng = this.allLatLngLookup[index].latLng;
+
+      console.log("gotten");
+
       const pixel = this.map.project(rawLatLng, 0);
       const position: [number, number] = [
         pixel.x - this.mapCenterPixels.x,
@@ -887,23 +875,23 @@ class LabeledIconPoints extends IconPoints {
       // console.log("Calculated label position:", position);
 
       const labelColor = this.getLabelColor(
-        feature as ILabeledFeature | number[]
+        feature as Feature<GeoPoint> | number[]
       );
       // console.log("Label color:", labelColor);
 
       const backgroundColor = this.getLabelBackgroundColor(
-        feature as ILabeledFeature | number[]
+        feature as Feature<GeoPoint> | number[]
       );
       // console.log("Background color:", backgroundColor);
 
       const padding = this.getLabelBackgroundPadding(
-        feature as ILabeledFeature | number[]
+        feature as Feature<GeoPoint> | number[]
       );
       // const padding: [number, number] = [10, 10];
       // console.log("Background padding:", padding);
 
       const pixelOffset = this.getLabelOffset(
-        feature as ILabeledFeature | number[]
+        feature as Feature<GeoPoint> | number[]
       );
       // const pixelOffset: [number, number] = [25, -40];
       // console.log("Label offset:", pixelOffset);
@@ -1121,35 +1109,31 @@ class LabeledIconPoints extends IconPoints {
   // }
 
   private getLabelText(
-    feature: Feature<GeoPoint, GeoJsonProperties> | ILabeledFeature | number[],
+    feature: Feature<GeoPoint, GeoJsonProperties> | number[],
     index?: number
   ): string {
     // TODO fix, implement something not stupid
     // if (Array.isArray(feature)) {
     //   return this.labelSettings.labelText?.(feature, index) ?? "";
     // }
-    // if (
-    //   "properties" in feature &&
-    //   feature.properties &&
-    //   "labelText" in feature.properties
-    // ) {
-    //   return feature.properties.labelText ?? "";
-    // }
+
+    if (
+      "properties" in feature &&
+      feature.properties &&
+      "labelText" in feature.properties
+    ) {
+      return feature.properties.labelText;
+    }
+
     // if (this.labelSettings.labelText) {
     //   return this.labelSettings.labelText(feature, index);
     // }
-
-    try {
-      return this.likuNumberArray[index!];
-    } catch {
-      console.log("Error in getLabelText");
-    }
 
     return "";
   }
 
   private getLabelOffset(
-    feature: ILabeledFeature | number[]
+    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
   ): [number, number] {
     if (Array.isArray(feature)) {
       return this.labelSettings.labelOffset ?? [25, -40];
@@ -1160,7 +1144,9 @@ class LabeledIconPoints extends IconPoints {
     return this.labelSettings.labelOffset ?? [25, -40];
   }
 
-  private getLabelColor(feature: ILabeledFeature | number[]): IColor {
+  private getLabelColor(
+    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
+  ): IColor {
     if (Array.isArray(feature)) {
       return this.labelSettings.labelColor ?? { r: 0, g: 0, b: 0, a: 1 };
     }
@@ -1170,7 +1156,9 @@ class LabeledIconPoints extends IconPoints {
     return this.labelSettings.labelColor ?? { r: 0, g: 0, b: 0, a: 1 };
   }
 
-  private getLabelBackgroundColor(feature: ILabeledFeature | number[]): IColor {
+  private getLabelBackgroundColor(
+    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
+  ): IColor {
     if (Array.isArray(feature)) {
       return (
         this.labelSettings.labelBackgroundColor ?? {
@@ -1195,7 +1183,7 @@ class LabeledIconPoints extends IconPoints {
   }
 
   private getLabelBackgroundPadding(
-    feature: ILabeledFeature | number[]
+    feature: Feature<GeoPoint, GeoJsonProperties> | number[]
   ): [number, number] {
     if (Array.isArray(feature)) {
       return this.labelSettings.labelBackgroundPadding ?? [10, 10];
@@ -1209,18 +1197,6 @@ class LabeledIconPoints extends IconPoints {
   setData(data: FeatureCollection<GeoPoint> | number[][]): this {
     this.settings = { ...this.settings, data };
     return this.render();
-  }
-
-  // TODO switch to proper input data types omg
-  setLikuNumberArray(likuNumberArray: string[]) {
-    // console.log("Setting likuNumberArray !!!!!");
-    try {
-      this.likuNumberArray = likuNumberArray;
-    } catch {
-      // console.error("Error in setLikuNumberArray");
-    }
-
-    return this;
   }
 
   // INFO error might be from here?

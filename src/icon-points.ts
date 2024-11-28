@@ -3,6 +3,8 @@ import {
   FeatureCollection,
   Point as GeoPoint,
   Position,
+  Geometry,
+  GeoJsonProperties,
 } from "geojson";
 
 import { BaseGlLayer, IBaseGlLayerSettings } from "./base-gl-layer";
@@ -121,6 +123,8 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     this.active = true;
 
     const { data, map } = this;
+
+    console.log("WARN DATATYPE IS HARDCODED TO GEOJSON.FEATURECOLLECTION");
     if (Array.isArray(data)) {
       this.dataFormat = "Array";
     } else if (data.type === "FeatureCollection") {
@@ -130,6 +134,11 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
         "unhandled data type. Supported types are Array and GeoJson.FeatureCollection"
       );
     }
+    // TODO FIXME
+    // WARN NOT GOOD
+    this.dataFormat = "GeoJson.FeatureCollection";
+    // But.. somehow the featureCollection is recognized as an array??
+    // manually setting it to GeoJson.FeatureCollection for now
 
     if (map.options.crs?.code !== "EPSG:3857") {
       console.warn("layer designed for SphericalMercator, alternate detected");
@@ -233,13 +242,9 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   }
 
   resetVertices(): this {
-    // console.log("Starting resetVertices");
-
     this.latLngLookup = {};
     this.allLatLngLookup = [];
     this.vertices = [];
-
-    // console.log("Initialized lookups and vertices");
 
     const {
       vertices,
@@ -274,8 +279,6 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     let latLng: LatLng;
     let pixel: Point;
     let key;
-
-    // console.log("Declared local variables");
 
     if (!color) {
       console.error("Color is not properly defined");
@@ -365,8 +368,6 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
         zOffset
       );
 
-      // console.log("Pushed vertex data to vertices array");
-
       const vertex: IIconVertex = {
         latLng,
         key,
@@ -390,6 +391,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     // console.log("Defined processVertex function");
 
     if (this.dataFormat === "Array") {
+      console.log("Processing Array data");
       // console.log("Processing Array data");
       const max = data.length;
       // console.log(`Data length: ${max}`);
@@ -397,11 +399,15 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
         processVertex(i, null);
       }
     } else if (this.dataFormat === "GeoJson.FeatureCollection") {
+      console.log("Processing GeoJson.FeatureCollection data");
       // console.log("Processing GeoJson.FeatureCollection data");
       const max = data.features.length;
       // console.log(`Features length: ${max}`);
       for (let i = 0; i < max; i++) {
-        const feature = data.features[i] as Feature<GeoPoint>;
+        const feature = data.features[i] as Feature<
+          Geometry,
+          GeoJsonProperties
+        >;
         processVertex(i, feature);
       }
     } else {
