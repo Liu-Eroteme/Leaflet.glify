@@ -1,7 +1,6 @@
-// File info: canvas-overlay-ts
-
-/*
-originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOverlay.js, added and customized as part of this lib because of need from library
+// INFO: Enhanced Canvas Overlay implementation for Leaflet with WebGL support
+// NOTE: Originally based on http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOverlay.js
+// WARN: Custom modifications for WebGL rendering and performance optimizations
  Generic  Canvas Overlay for leaflet,
  Stanislav Sumbera, April , 2014
 
@@ -28,19 +27,28 @@ import {
 
 import { EventEmitter } from "events";
 
+// NOTE: Event data passed to draw function on each render
 export interface ICanvasOverlayDrawEvent {
-  canvas: HTMLCanvasElement;
-  bounds: LatLngBounds;
-  offset: Point;
-  scale: number;
-  size: Point;
-  zoomScale: number;
-  zoom: number;
+  canvas: HTMLCanvasElement; // The canvas element to draw on
+  bounds: LatLngBounds; // Current map bounds
+  offset: Point; // Pixel offset from map origin
+  scale: number; // Current map scale factor
+  size: Point; // Canvas size in pixels
+  zoomScale: number; // Scale factor for zoom level
+  zoom: number; // Current zoom level
+  timestamp?: number; // TODO: Add timestamp for animation support
 }
 
+// NOTE: Function signatures for drawing and redraw callbacks
 export type IUserDrawFunc = (event: ICanvasOverlayDrawEvent) => void;
+export type RedrawCallback = (instance: CanvasOverlay) => Promise<void> | void;
 
-export type RedrawCallback = (instance: CanvasOverlay) => void;
+// IDEA: Consider adding render statistics interface
+export interface IRenderStats {
+  frameTime: number;
+  vertexCount: number;
+  drawCalls: number;
+}
 
 export class CanvasOverlay extends Layer {
   private _isDragging: boolean = false;

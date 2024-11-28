@@ -1,6 +1,7 @@
 // File info: base-gl-layer.ts
+// INFO: Core abstract class for WebGL-based Leaflet layers
 
-import { LeafletMouseEvent, Map, LatLng } from "leaflet";
+import { LeafletMouseEvent, Map, LatLng, Layer } from "leaflet";
 
 import { IColor } from "./color";
 import { IPixel } from "./pixel";
@@ -10,16 +11,19 @@ import { MapMatrix } from "./map-matrix";
 
 import { Point } from "leaflet";
 
+// NOTE: Shader variable interface for WebGL attribute configuration
 export interface IShaderVariable {
-  type: "FLOAT";
-  start?: number;
-  size: number;
-  normalize?: boolean;
+  type: "FLOAT"; // TODO: Support more WebGL types (INT, VEC2, etc)
+  start: number; // Starting offset in bytes
+  size: number; // Number of components per vertex
+  normalize: boolean; // Whether to normalize the values
+  stride?: number; // Optional byte offset between consecutive attributes
 }
 
+// NOTE: Callback type for mouse events
 export type EventCallback = (
   e: LeafletMouseEvent,
-  feature: any
+  feature: GeoJSON.Feature | number[] // IDEA: Consider making this more specific based on layer type
 ) => boolean | void;
 
 export type SetupHoverCallback = (
