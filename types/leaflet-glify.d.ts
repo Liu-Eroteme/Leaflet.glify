@@ -12,6 +12,17 @@ declare module "leaflet" {
     }
 
     // NOTE: Base options interface for all GL layers
+    /**
+     * Core options interface for all GL-based layers
+     * 
+     * @property contextOptions - WebGL context configuration
+     *   - preserveDrawingBuffer: boolean (for screenshot support)
+     *   - antialias: boolean (for smoother rendering)
+     *   - alpha: boolean (for transparency support)
+     * 
+     * @property renderMetrics - Enable performance monitoring
+     *   - Exposes basic metrics like FPS and draw calls
+     */
     interface IGlifyLayerOptions {
       map: L.Map;
       data: [number, number][] | GeoJSON.FeatureCollection<GeoJSON.Point>;
@@ -34,6 +45,12 @@ declare module "leaflet" {
           stride?: number;
         };
       };
+      contextOptions?: {
+        preserveDrawingBuffer?: boolean;
+        antialias?: boolean;
+        alpha?: boolean;
+      };
+      renderMetrics?: boolean;
     }
 
     // NOTE: Event handling types
