@@ -358,7 +358,7 @@ export abstract class BaseGlLayer<
     try {
       // Try WebGL2 first
       console.log("Attempting WebGL2 context creation with attributes:", contextAttributes);
-      const gl2 = canvas.getContext('webgl2', contextAttributes);
+      const gl2 = canvas.getContext('webgl2', contextAttributes) as WebGL2RenderingContext | null;
       
       if (gl2) {
         console.log("WebGL2 context created successfully");
@@ -369,7 +369,7 @@ export abstract class BaseGlLayer<
       
       // Try WebGL1
       console.log("WebGL2 failed, attempting WebGL1");
-      const gl1 = canvas.getContext('webgl', contextAttributes);
+      const gl1 = canvas.getContext('webgl', contextAttributes) as WebGLRenderingContext | null;
       
       if (gl1) {
         console.log("WebGL1 context created successfully");
@@ -380,7 +380,7 @@ export abstract class BaseGlLayer<
       
       // Try experimental-webgl
       console.log("WebGL1 failed, attempting experimental-webgl");
-      const glExp = canvas.getContext('experimental-webgl', contextAttributes);
+      const glExp = canvas.getContext('experimental-webgl', contextAttributes) as WebGLRenderingContext | null;
       
       if (glExp) {
         console.log("Experimental WebGL context created successfully");
@@ -405,7 +405,7 @@ export abstract class BaseGlLayer<
         webgl2: 'WebGL2RenderingContext' in window,
         webgl: 'WebGLRenderingContext' in window
       });
-      throw new Error(`WebGL initialization failed: ${err.message}`);
+      throw new Error(`WebGL initialization failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
