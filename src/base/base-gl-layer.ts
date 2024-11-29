@@ -356,15 +356,40 @@ export abstract class BaseGlLayer<
     };
 
     try {
+      // Add diagnostic checks before context creation
+      console.log("Canvas state before context creation:", {
+        isConnected: canvas.isConnected,
+        visibility: canvas.style.visibility,
+        display: canvas.style.display,
+        dimensions: `${canvas.width}x${canvas.height}`,
+        offsetParent: canvas.offsetParent,
+        documentBody: document.body !== null,
+        inDocument: document.contains(canvas)
+      });
+
+      // Check for hardware acceleration
+      const canvas2d = document.createElement('canvas');
+      const ctx2d = canvas2d.getContext('2d');
+      const webglTestCanvas = document.createElement('canvas');
+      const testGL = webglTestCanvas.getContext('webgl');
+      
+      console.log("WebGL environment diagnostics:", {
+        // @ts-ignore
+        isHardwareAccelerated: ctx2d?.webkitBackingStorePixelRatio !== undefined,
+        testContextCreation: !!testGL,
+        testContextAttributes: testGL?.getContextAttributes(),
+        // @ts-ignore
+        gpuInfo: window.chrome?.gpuInfo?.getInfo?.(),
+        webglContexts: {
+          webgl2: !!webglTestCanvas.getContext('webgl2'),
+          webgl: !!webglTestCanvas.getContext('webgl'),
+          experimental: !!webglTestCanvas.getContext('experimental-webgl')
+        }
+      });
+
       // Try WebGL2 first
-      console.log(
-        "Attempting WebGL2 context creation with attributes:",
-        contextAttributes
-      );
-      const gl2 = canvas.getContext(
-        "webgl2",
-        contextAttributes
-      ) as WebGL2RenderingContext | null;
+      console.log("Attempting WebGL2 context creation with attributes:", contextAttributes);
+      const gl2 = canvas.getContext("webgl2", contextAttributes) as WebGL2RenderingContext | null;
 
       if (gl2) {
         console.log("WebGL2 context created successfully");
@@ -375,10 +400,7 @@ export abstract class BaseGlLayer<
 
       // Try WebGL1
       console.log("WebGL2 failed, attempting WebGL1");
-      const gl1 = canvas.getContext(
-        "webgl",
-        contextAttributes
-      ) as WebGLRenderingContext | null;
+      const gl1 = canvas.getContext("webgl", contextAttributes) as WebGLRenderingContext | null;
 
       if (gl1) {
         console.log("WebGL1 context created successfully");
@@ -389,10 +411,7 @@ export abstract class BaseGlLayer<
 
       // Try experimental-webgl
       console.log("WebGL1 failed, attempting experimental-webgl");
-      const glExp = canvas.getContext(
-        "experimental-webgl",
-        contextAttributes
-      ) as WebGLRenderingContext | null;
+      const glExp = canvas.getContext("experimental-webgl", contextAttributes) as WebGLRenderingContext | null;
 
       if (glExp) {
         console.log("Experimental WebGL context created successfully");
@@ -401,12 +420,27 @@ export abstract class BaseGlLayer<
         return;
       }
 
-      // Log WebGL support information
-      console.error("WebGL Support Check:", {
-        webgl2Available: !!canvas.getContext("webgl2"),
-        webglAvailable: !!canvas.getContext("webgl"),
-        experimentalAvailable: !!canvas.getContext("experimental-webgl"),
-        contextAttributes: contextAttributes,
+      // Log detailed failure information
+      console.error("WebGL Context Creation Failed:", {
+        canvasState: {
+          width: canvas.width,
+          height: canvas.height,
+          style: canvas.style.cssText,
+          isConnected: canvas.isConnected,
+          inDocument: document.contains(canvas),
+          visibility: canvas.style.visibility,
+          display: canvas.style.display
+        },
+        contextAttempts: {
+          webgl2: !!canvas.getContext("webgl2"),
+          webgl: !!canvas.getContext("webgl"),
+          experimental: !!canvas.getContext("experimental-webgl")
+        },
+        contextAttributes,
+        // @ts-ignore
+        gpuInfo: window.chrome?.gpuInfo?.getInfo?.(),
+        userAgent: navigator.userAgent,
+        vendor: navigator.vendor
       });
 
       throw new Error("Could not create any WebGL context");
