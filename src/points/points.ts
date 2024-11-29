@@ -38,16 +38,19 @@ const defaults: Partial<IPointsSettings> = {
       type: "FLOAT",
       start: 0,
       size: 2,
+      normalize: false,
     },
     color: {
-      type: "FLOAT",
+      type: "FLOAT", 
       start: 2,
       size: 4,
+      normalize: false,
     },
     pointSize: {
       type: "FLOAT",
       start: 6,
       size: 1,
+      normalize: false,
     },
   },
 };
