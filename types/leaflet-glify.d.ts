@@ -179,13 +179,53 @@ declare module "leaflet" {
     function points(options: PointsOptions): PointsInstance;
     function iconPoints(options: IconPointsOptions): IconPointsInstance;
     function labeledIconPoints(options: LabeledIconPointsOptions): LabeledIconPointsInstance;
-    function lines(options: any): any;
+    // Line-specific interfaces
+    interface ILineVertex {
+      latLng: L.LatLng;
+      pixel: L.Point;
+      chosenColor: IColor;
+      chosenWeight: number;
+      key: string;
+      feature?: GeoJSON.Feature<GeoJSON.LineString | GeoJSON.MultiLineString>;
+    }
+
+    interface LinesOptions extends IGlifyLayerOptions {
+      data: GeoJSON.FeatureCollection<GeoJSON.LineString | GeoJSON.MultiLineString>;
+      weight: number | ((index: number, feature: GeoJSON.Feature) => number);
+      sensitivity?: number;
+      sensitivityHover?: number;
+      click?: EventCallback;
+      hover?: EventCallback;
+      hoverOff?: EventCallback;
+      setupClick?: (map: L.Map) => void;
+      setupHover?: SetupHoverCallback;
+      hoverWait?: number;
+      eachVertex?: (vertices: ILineVertex[]) => void;
+    }
+
+    interface LinesInstance extends IGlifyLayer {
+      active: boolean;
+      vertices: number[];
+      allVertices: number[];
+      allVerticesTyped: Float32Array;
+      lineFeatures: ILineVertex[];
+      canvas: HTMLCanvasElement;
+      gl: WebGLRenderingContext | WebGL2RenderingContext;
+      
+      resetVertices(): this;
+      drawOnCanvas(e: ICanvasOverlayDrawEvent): this;
+      getBuffer(name: string): WebGLBuffer;
+      getAttributeLocation(name: string): number;
+      getUniformLocation(name: string): WebGLUniformLocation;
+    }
+
+    function lines(options: LinesOptions): LinesInstance;
     function shapes(options: any): any;
 
     const pointsInstances: PointsInstance[];
     const iconPointsInstances: IconPointsInstance[];
     const labeledIconPointsInstances: LabeledIconPointsInstance[];
-    const linesInstances: any[];
+    const linesInstances: LinesInstance[];
     const shapesInstances: any[];
   }
 
