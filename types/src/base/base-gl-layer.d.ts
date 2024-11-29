@@ -40,7 +40,7 @@ export interface IWebGLContextOptions {
     stencil?: boolean;
     premultipliedAlpha?: boolean;
     failIfMajorPerformanceCaveat?: boolean;
-    powerPreference?: 'default' | 'high-performance' | 'low-power';
+    powerPreference?: "default" | "high-performance" | "low-power";
     desynchronized?: boolean;
 }
 export interface IGlBufferConfig {
