@@ -42,26 +42,31 @@ const defaults: Partial<IIconPointsSettings> = {
       type: "FLOAT",
       start: 0,
       size: 2,
+      normalize: false
     },
     color: {
       type: "FLOAT",
       start: 2,
       size: 4,
+      normalize: false
     },
     pointSize: {
       type: "FLOAT",
       start: 6,
       size: 1,
+      normalize: false
     },
     texCoord: {
       type: "FLOAT",
       start: 7,
       size: 2,
+      normalize: false
     },
     offsetZ: {
       type: "FLOAT",
       start: 9,
       size: 1,
+      normalize: false
     },
   },
 };
@@ -87,7 +92,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   } = {};
 
   allLatLngLookup: IIconVertex[] = [];
-  vertices: number[] = [];
+  vertices: Float32Array = new Float32Array();
   typedVertices: Float32Array = new Float32Array();
   dataFormat: "Array" | "GeoJson.FeatureCollection";
   settings: Partial<IIconPointsSettings>;
