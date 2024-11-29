@@ -7,15 +7,15 @@ import {
   Position,
 } from "geojson";
 
-import { BaseGlLayer, IBaseGlLayerSettings } from "./base/base-gl-layer";
-import { ICanvasOverlayDrawEvent } from "./base/canvas-overlay";
-import * as Color from "./color";
+import { BaseGlLayer, IBaseGlLayerSettings } from "../base/base-gl-layer";
+import { ICanvasOverlayDrawEvent } from "../base/canvas-overlay";
+import * as Color from "../util/color";
 import { LeafletMouseEvent, Map, Point, LatLng } from "leaflet";
-import { IPixel } from "./pixel";
-import { locationDistance, pixelInCircle } from "./utils";
-import glify from "./index";
+import { IPixel } from "../util/pixel";
+import { locationDistance, pixelInCircle } from "../util/utils";
+import glify from "../index";
 
-import { MapMatrix } from "./map-matrix";
+import { MapMatrix } from "../util/map-matrix";
 
 export interface IPointsSettings extends IBaseGlLayerSettings {
   data: number[][] | FeatureCollection<GeoPoint>;

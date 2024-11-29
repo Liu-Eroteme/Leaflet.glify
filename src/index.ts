@@ -1,15 +1,15 @@
 // File info: index.ts
 import { LeafletMouseEvent, Map } from "leaflet";
 
-import { Lines, ILinesSettings } from "./lines";
-import { Points, IPointsSettings } from "./points";
-import { Shapes, IShapesSettings } from "./shapes";
-import { IconPoints, IIconPointsSettings } from "./icon-points";
+import { Lines, ILinesSettings } from "./lines/lines";
+import { Points, IPointsSettings } from "./points/points";
+import { Shapes, IShapesSettings } from "./shapes/shapes";
+import { IconPoints, IIconPointsSettings } from "./icon_points/icon-points";
 import {
   LabeledIconPoints,
   ILabeledIconPointsSettings,
 } from "./icon_points/labeled-icon-points";
-import { debounce } from "./utils";
+import { debounce } from "./util/utils";
 
 import defaultShader from "./shader/vertex/default.glsl";
 import IPshader from "./shader/vertex/icon-points.glsl"; // Add this line

@@ -15,13 +15,13 @@ import {
   BaseGlLayer,
   ColorCallback,
   IBaseGlLayerSettings,
-} from "./base/base-gl-layer";
-import { ICanvasOverlayDrawEvent } from "./base/canvas-overlay";
-import * as Color from "./color";
-import { latLonToPixel } from "./utils";
+} from "../base/base-gl-layer";
+import { ICanvasOverlayDrawEvent } from "../base/canvas-overlay";
+import * as Color from "../util/color";
+import { latLonToPixel } from "../util/utils";
 
-import { notProperlyDefined } from "./errors";
-import glify from "./index";
+import { notProperlyDefined } from "../util/errors";
+import glify from "../index";
 
 export interface IShapesSettings extends IBaseGlLayerSettings {
   border?: boolean;

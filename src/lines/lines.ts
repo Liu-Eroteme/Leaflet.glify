@@ -11,12 +11,12 @@ import {
   BaseGlLayer,
   ColorCallback,
   IBaseGlLayerSettings,
-} from "./base/base-gl-layer";
-import { ICanvasOverlayDrawEvent } from "./base/canvas-overlay";
-import * as color from "./color";
+} from "../base/base-gl-layer";
+import { ICanvasOverlayDrawEvent } from "../base/canvas-overlay";
+import * as color from "../util/color";
 import { LineFeatureVertices } from "./line-feature-vertices";
-import { latLngDistance, inBounds } from "./utils";
-import glify from "./index";
+import { latLngDistance, inBounds } from "../util/utils";
+import glify from "../index";
 
 export type WeightCallback = (i: number, feature: any) => number;
 
