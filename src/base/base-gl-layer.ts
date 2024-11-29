@@ -5,14 +5,17 @@
 export interface IShaderConfig {
   vertexSource: string;
   fragmentSource: string;
-  attributes: Record<string, {
-    location: number;
-    size: number;
-    type: number;
-    normalized: boolean;
-    stride: number;
-    offset: number;
-  }>;
+  attributes: Record<
+    string,
+    {
+      location: number;
+      size: number;
+      type: number;
+      normalized: boolean;
+      stride: number;
+      offset: number;
+    }
+  >;
   uniforms: Record<string, WebGLUniformLocation>;
 }
 
@@ -63,7 +66,7 @@ export interface IWebGLContextOptions {
   stencil?: boolean;
   premultipliedAlpha?: boolean;
   failIfMajorPerformanceCaveat?: boolean;
-  powerPreference?: 'default' | 'high-performance' | 'low-power';
+  powerPreference?: "default" | "high-performance" | "low-power";
   desynchronized?: boolean;
 }
 
@@ -86,7 +89,11 @@ export interface IGlShaderConfig {
 }
 
 export interface IBaseGlLayerSettings {
-  data: GeoJSON.FeatureCollection | GeoJSON.Feature | GeoJSON.Geometry | number[][];
+  data:
+    | GeoJSON.FeatureCollection
+    | GeoJSON.Feature
+    | GeoJSON.Geometry
+    | number[][];
   longitudeKey: number;
   latitudeKey: number;
   pane: string;
@@ -137,7 +144,7 @@ export abstract class BaseGlLayer<
   vertexShader: WebGLShader | null;
   abstract vertices: number[] | Float32Array;
   mapCenterPixels: IPixel;
-  
+
   protected readonly glState: {
     isContextLost: boolean;
     lastFrameTime: number;
@@ -157,7 +164,7 @@ export abstract class BaseGlLayer<
     fps: 0,
     shaderCompileTime: 0,
     bufferUploadTime: 0,
-    renderTime: 0
+    renderTime: 0,
   };
 
   protected shaderConfig: IShaderConfig | null = null;
@@ -250,7 +257,7 @@ export abstract class BaseGlLayer<
   }
 
   protected isFeatureCollection(data: any): data is GeoJSON.FeatureCollection {
-    return data && typeof data === 'object' && Array.isArray(data.features);
+    return data && typeof data === "object" && Array.isArray(data.features);
   }
 
   get latitudeKey(): number {
@@ -272,10 +279,10 @@ export abstract class BaseGlLayer<
   }
 
   constructor(settings: Partial<IBaseGlLayerSettings>) {
-    console.log('BaseGlLayer constructor - Starting initialization');
+    console.log("BaseGlLayer constructor - Starting initialization");
     this.settings = { ...defaults, ...settings };
-    console.log('BaseGlLayer constructor - Settings initialized');
-    
+    console.log("BaseGlLayer constructor - Settings initialized");
+
     this.mapMatrix = new MapMatrix();
     this.active = true;
     this.vertexShader = null;
@@ -285,7 +292,7 @@ export abstract class BaseGlLayer<
 
     // Initialize WebGL context with configured options
     if (settings.contextOptions) {
-      console.log('BaseGlLayer constructor - Using custom context options');
+      console.log("BaseGlLayer constructor - Using custom context options");
       this.gl = this.initWebGLContext(settings.contextOptions);
     }
     try {
@@ -320,28 +327,43 @@ export abstract class BaseGlLayer<
     if (this.className) {
       canvas.className += " " + this.className;
     }
-    console.log('BaseGlLayer constructor - Starting GL context initialization');
-    console.log('BaseGlLayer constructor - Canvas element:', canvas ? 'exists' : 'null');
-    
+    console.log("BaseGlLayer constructor - Starting GL context initialization");
+    console.log("can i not even access the canvas element?");
+    console.log(
+      "BaseGlLayer constructor - Canvas element:",
+      canvas ? "exists" : "null"
+    );
+
     const gl = canvas.getContext("webgl2", {
       preserveDrawingBuffer,
       antialias: true,
     });
-    console.log('BaseGlLayer constructor - WebGL2 context:', gl ? 'obtained' : 'failed');
-    
+    console.log(
+      "BaseGlLayer constructor - WebGL2 context:",
+      gl ? "obtained" : "failed"
+    );
+
     if (!gl) {
       const gl1 = canvas.getContext("webgl", { preserveDrawingBuffer });
-      console.log('BaseGlLayer constructor - WebGL1 context:', gl1 ? 'obtained' : 'failed');
-      
+      console.log(
+        "BaseGlLayer constructor - WebGL1 context:",
+        gl1 ? "obtained" : "failed"
+      );
+
       if (!gl1) {
         const glExperimental = canvas.getContext("experimental-webgl", {
           preserveDrawingBuffer,
         });
-        console.log('BaseGlLayer constructor - Experimental WebGL context:', glExperimental ? 'obtained' : 'failed');
-        
+        console.log(
+          "BaseGlLayer constructor - Experimental WebGL context:",
+          glExperimental ? "obtained" : "failed"
+        );
+
         if (!glExperimental) {
-          console.error('BaseGlLayer constructor - All WebGL context creation attempts failed');
-          throw new Error('Failed to initialize WebGL context');
+          console.error(
+            "BaseGlLayer constructor - All WebGL context creation attempts failed"
+          );
+          throw new Error("Failed to initialize WebGL context");
         }
         this.gl = glExperimental as WebGLRenderingContext;
       } else {
@@ -350,38 +372,45 @@ export abstract class BaseGlLayer<
     } else {
       this.gl = gl as WebGLRenderingContext;
     }
-    
-    console.log('BaseGlLayer constructor - Final GL context:', this.gl ? 'initialized' : 'null');
+
+    console.log(
+      "BaseGlLayer constructor - Final GL context:",
+      this.gl ? "initialized" : "null"
+    );
   }
 
-  protected initWebGLContext(options: IWebGLContextOptions): WebGLRenderingContext | WebGL2RenderingContext {
+  protected initWebGLContext(
+    options: IWebGLContextOptions
+  ): WebGLRenderingContext | WebGL2RenderingContext {
     if (!this.canvas) {
-      throw new Error('Canvas not initialized');
+      throw new Error("Canvas not initialized");
     }
 
-    const contextTypes: string[] = ['webgl2', 'webgl', 'experimental-webgl'];
+    const contextTypes: string[] = ["webgl2", "webgl", "experimental-webgl"];
     let context: WebGLRenderingContext | WebGL2RenderingContext | null = null;
 
     for (const type of contextTypes) {
-      context = this.canvas.getContext(type, options) as WebGLRenderingContext | WebGL2RenderingContext;
+      context = this.canvas.getContext(type, options) as
+        | WebGLRenderingContext
+        | WebGL2RenderingContext;
       if (context) {
-        if (type === 'webgl2') {
+        if (type === "webgl2") {
           return context as WebGL2RenderingContext;
         }
         return context as WebGLRenderingContext;
       }
     }
 
-    throw new Error('WebGL not supported');
+    throw new Error("WebGL not supported");
   }
 
   protected updateBufferState(name: string, data: Float32Array): void {
-    const state = this.bufferStates[name] = this.bufferStates[name] || {
+    const state = (this.bufferStates[name] = this.bufferStates[name] || {
       buffer: this.gl.createBuffer(),
       data: null,
       isDirty: true,
-      lastUpdateTime: 0
-    };
+      lastUpdateTime: 0,
+    });
 
     state.data = data;
     state.isDirty = true;
@@ -399,7 +428,7 @@ export abstract class BaseGlLayer<
       fps: this.glState.fps,
       renderTime: this.glState.renderTime,
       shaderCompileTime: this.glState.shaderCompileTime,
-      bufferUploadTime: this.glState.bufferUploadTime
+      bufferUploadTime: this.glState.bufferUploadTime,
     };
   }
 
@@ -542,9 +571,11 @@ export abstract class BaseGlLayer<
       this.map.removeLayer(this.layer);
       this.active = false;
     } else {
-      const features = Array.isArray(this.settings.data) 
-        ? this.settings.data 
-        : this.isFeatureCollection(this.settings.data) ? this.settings.data.features : [];
+      const features = Array.isArray(this.settings.data)
+        ? this.settings.data
+        : this.isFeatureCollection(this.settings.data)
+          ? this.settings.data.features
+          : [];
       indices = indices instanceof Array ? indices : [indices];
       if (typeof indices === "number") {
         indices = [indices];
@@ -564,9 +595,11 @@ export abstract class BaseGlLayer<
 
   insert(features: any | any[], index: number): this {
     const featuresArray = Array.isArray(features) ? features : [features];
-    const featuresData = Array.isArray(this.settings.data) 
-      ? this.settings.data 
-      : this.isFeatureCollection(this.settings.data) ? this.settings.data.features : [];
+    const featuresData = Array.isArray(this.settings.data)
+      ? this.settings.data
+      : this.isFeatureCollection(this.settings.data)
+        ? this.settings.data.features
+        : [];
 
     for (let i = 0; i < featuresArray.length; i++) {
       featuresData.splice(index + i, 0, featuresArray[i]);
@@ -576,9 +609,11 @@ export abstract class BaseGlLayer<
   }
 
   update(feature: any | any[], index: number): this {
-    const featuresData = Array.isArray(this.settings.data) 
-      ? this.settings.data 
-      : this.isFeatureCollection(this.settings.data) ? this.settings.data.features : [];
+    const featuresData = Array.isArray(this.settings.data)
+      ? this.settings.data
+      : this.isFeatureCollection(this.settings.data)
+        ? this.settings.data.features
+        : [];
 
     if (Array.isArray(feature)) {
       for (let i = 0; i < feature.length; i++) {
