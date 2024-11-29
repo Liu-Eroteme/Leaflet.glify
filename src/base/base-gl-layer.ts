@@ -336,146 +336,83 @@ export abstract class BaseGlLayer<
   }
 
   private initializeWebGLContext() {
-    // Log canvas diagnostics
-    console.log("Canvas setup details:", {
-      width: this.canvas.width,
-      height: this.canvas.height,
-      style: this.canvas.style.cssText,
-      offsetWidth: this.canvas.offsetWidth,
-      offsetHeight: this.canvas.offsetHeight,
-      clientWidth: this.canvas.clientWidth,
-      clientHeight: this.canvas.clientHeight,
-      inDocument: document.contains(this.canvas),
-    });
+    if (!this.canvas) {
+      throw new Error("Canvas not initialized");
+    }
 
-    // Initialize WebGL with detailed error checking
-    console.log("BaseGlLayer - Starting GL context initialization");
+    // Force canvas to be visible and properly sized
+    this.canvas.style.display = 'block';
+    this.canvas.style.visibility = 'visible';
+    
+    // Ensure canvas dimensions are non-zero
+    if (this.canvas.width === 0 || this.canvas.height === 0) {
+      console.warn("Canvas has zero dimensions, setting defaults");
+      this.canvas.width = this.canvas.clientWidth || 300;
+      this.canvas.height = this.canvas.clientHeight || 150;
+    }
 
+    // Basic context attributes - keep it simple initially
     const contextAttributes: WebGLContextAttributes = {
-      preserveDrawingBuffer: Boolean(this.settings.preserveDrawingBuffer),
-      antialias: true,
       alpha: true,
-      depth: true,
-      stencil: true,
+      antialias: true,
+      depth: false, // We don't need depth testing for 2D
+      stencil: false, // No stencil needed
+      preserveDrawingBuffer: Boolean(this.settings.preserveDrawingBuffer),
       failIfMajorPerformanceCaveat: false,
-      powerPreference: "high-performance",
+      powerPreference: "default" // Let browser decide
     };
 
-    // Check hardware acceleration without using non-standard properties
-    const testCanvas = document.createElement('canvas');
-    const testContext = testCanvas.getContext('2d');
-    const isHardwareAccelerated = testContext !== null;
-
     try {
-      // Add diagnostic checks before context creation
-      console.log("Canvas state before context creation:", {
-        isConnected: this.canvas.isConnected,
-        visibility: this.canvas.style.visibility,
-        display: this.canvas.style.display,
-        dimensions: `${this.canvas.width}x${this.canvas.height}`,
-        offsetParent: this.canvas.offsetParent,
-        documentBody: document.body !== null,
-        inDocument: document.contains(this.canvas),
-      });
-
-      // Check for hardware acceleration
-      const canvas2d = document.createElement("canvas");
-      const ctx2d = canvas2d.getContext("2d");
-      const webglTestCanvas = document.createElement("canvas");
-      const testGL = webglTestCanvas.getContext("webgl");
-
-      console.log("WebGL environment diagnostics:", {
-        isHardwareAccelerated: isHardwareAccelerated,
-        testContextCreation: !!testGL,
-        testContextAttributes: testGL?.getContextAttributes(),
-        // @ts-ignore
-        gpuInfo: window.chrome?.gpuInfo?.getInfo?.(),
-        webglContexts: {
-          webgl2: !!webglTestCanvas.getContext("webgl2"),
-          webgl: !!webglTestCanvas.getContext("webgl"),
-          experimental: !!webglTestCanvas.getContext("experimental-webgl"),
-        },
-      });
-
-      // Try WebGL2 first
-      console.log(
-        "Attempting WebGL2 context creation with attributes:",
-        contextAttributes
-      );
-      const gl2 = this.canvas.getContext(
-        "webgl2",
-        contextAttributes
-      ) as WebGL2RenderingContext | null;
-
-      if (gl2) {
-        console.log("WebGL2 context created successfully");
-        this.gl = gl2;
-        this.logWebGLCapabilities(gl2);
+      // Try getting WebGL2 context first
+      let gl = this.canvas.getContext('webgl2', contextAttributes) as WebGL2RenderingContext | null;
+      
+      if (gl) {
+        this.gl = gl;
         return;
       }
 
-      // Try WebGL1
-      console.log("WebGL2 failed, attempting WebGL1");
-      const gl1 = this.canvas.getContext(
-        "webgl",
-        contextAttributes
-      ) as WebGLRenderingContext | null;
-
-      if (gl1) {
-        console.log("WebGL1 context created successfully");
-        this.gl = gl1;
-        this.logWebGLCapabilities(gl1);
+      // Fallback to WebGL1
+      gl = this.canvas.getContext('webgl', contextAttributes) as WebGLRenderingContext | null;
+      
+      if (gl) {
+        this.gl = gl;
         return;
       }
 
-      // Try experimental-webgl
-      console.log("WebGL1 failed, attempting experimental-webgl");
-      const glExp = this.canvas.getContext(
-        "experimental-webgl",
-        contextAttributes
-      ) as WebGLRenderingContext | null;
-
-      if (glExp) {
-        console.log("Experimental WebGL context created successfully");
-        this.gl = glExp;
-        this.logWebGLCapabilities(glExp);
+      // Last resort - try experimental-webgl
+      gl = this.canvas.getContext('experimental-webgl', contextAttributes) as WebGLRenderingContext | null;
+      
+      if (gl) {
+        this.gl = gl;
         return;
       }
 
-      // Log detailed failure information
+      // If we get here, no WebGL context could be created
+      const error = new Error("WebGL not supported - no context could be created");
+      console.error(error);
+      
+      // Log critical diagnostic info
       console.error("WebGL Context Creation Failed:", {
-        canvasState: {
+        canvas: {
           width: this.canvas.width,
           height: this.canvas.height,
+          clientWidth: this.canvas.clientWidth,
+          clientHeight: this.canvas.clientHeight,
           style: this.canvas.style.cssText,
-          isConnected: this.canvas.isConnected,
-          inDocument: document.contains(this.canvas),
-          visibility: this.canvas.style.visibility,
-          display: this.canvas.style.display,
-        },
-        contextAttempts: {
-          webgl2: !!this.canvas.getContext("webgl2"),
-          webgl: !!this.canvas.getContext("webgl"),
-          experimental: !!this.canvas.getContext("experimental-webgl"),
+          inDocument: document.contains(this.canvas)
         },
         contextAttributes,
-        // @ts-ignore
-        gpuInfo: window.chrome?.gpuInfo?.getInfo?.(),
-        userAgent: navigator.userAgent,
-        vendor: navigator.vendor,
+        webglSupport: {
+          webgl2: 'WebGL2RenderingContext' in window,
+          webgl: 'WebGLRenderingContext' in window
+        }
       });
-
-      throw new Error("Could not create any WebGL context");
+      
+      throw error;
     } catch (err) {
-      console.error("WebGL context creation error:", err);
-      console.error("Browser:", navigator.userAgent);
-      console.error("WebGL support:", {
-        webgl2: "WebGL2RenderingContext" in window,
-        webgl: "WebGLRenderingContext" in window,
-      });
-      throw new Error(
-        `WebGL initialization failed: ${err instanceof Error ? err.message : String(err)}`
-      );
+      const error = new Error(`WebGL initialization failed: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(error);
+      throw error;
     }
   }
 

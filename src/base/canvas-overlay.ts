@@ -197,19 +197,29 @@ export class CanvasOverlay extends Layer {
     this._map = map;
     console.log('CanvasOverlay onAdd - Map assigned');
     
-    const canvas = (this.canvas =
-      this.canvas ?? document.createElement("canvas"));
-    console.log('CanvasOverlay onAdd - Canvas created/assigned');
-
+    // Create and configure canvas
+    const canvas = (this.canvas = document.createElement("canvas"));
     const size = map.getSize();
-    console.log('CanvasOverlay onAdd - Map size:', size);
     const animated = this.isAnimated();
-    console.log('CanvasOverlay onAdd - Animation status:', animated);
     
-    canvas.width = size.x;
-    canvas.height = size.y;
+    // Ensure canvas is visible and properly sized
+    canvas.style.display = 'block';
+    canvas.style.visibility = 'visible';
+    canvas.width = size.x || 300; // Fallback size if map size is 0
+    canvas.height = size.y || 150;
     canvas.className = `leaflet-zoom-${animated ? "animated" : "hide"}`;
-    console.log('CanvasOverlay onAdd - Canvas configured');
+    
+    // Force a style update to ensure canvas is ready for WebGL
+    canvas.style.position = 'absolute';
+    canvas.style.left = '0';
+    canvas.style.top = '0';
+    
+    // Log canvas setup for debugging
+    console.log('CanvasOverlay onAdd - Canvas configured:', {
+      size,
+      dimensions: `${canvas.width}x${canvas.height}`,
+      style: canvas.style.cssText
+    });
 
     const pane = map.getPane(this._pane);
     if (!pane) {
