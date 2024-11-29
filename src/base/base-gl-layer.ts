@@ -250,6 +250,10 @@ export abstract class BaseGlLayer<
     return this.settings.longitudeKey;
   }
 
+  protected isFeatureCollection(data: any): data is GeoJSON.FeatureCollection {
+    return data && typeof data === 'object' && Array.isArray(data.features);
+  }
+
   get latitudeKey(): number {
     if (typeof this.settings.latitudeKey !== "number") {
       throw new Error(notProperlyDefined("settings.latitudeKey"));
@@ -276,8 +280,8 @@ export abstract class BaseGlLayer<
     this.fragmentShader = null;
     this.program = null;
     this.matrix = null;
-    this.vertices = null;
-    this.vertexLines = null;
+    this.vertices = new Float32Array(0);
+    this.vertexLines = new Float32Array(0);
 
     // Initialize WebGL context with configured options
     if (settings.contextOptions) {
