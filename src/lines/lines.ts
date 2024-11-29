@@ -46,11 +46,13 @@ const defaults: Partial<ILinesSettings> = {
       type: "FLOAT",
       start: 0,
       size: 2,
+      normalize: false
     },
     color: {
       type: "FLOAT",
       start: 2,
       size: 4,
+      normalize: false
     },
   },
 };
@@ -62,7 +64,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
   bytes = 6;
   allVertices: number[] = [];
   allVerticesTyped: Float32Array = new Float32Array(0);
-  vertices: LineFeatureVertices[] = [];
+  vertices: number[] = [];
+  lineFeatures: LineFeatureVertices[] = [];
   aPointSize = -1;
   settings: Partial<ILinesSettings>;
 
@@ -231,7 +234,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       }
     }
 
-    this.vertices = vertices;
+    this.lineFeatures = vertices;
     this.allVertices = allVertices;
     this.allVerticesTyped = new Float32Array(allVertices);
 
