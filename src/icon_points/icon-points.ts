@@ -92,7 +92,8 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   } = {};
 
   allLatLngLookup: IIconVertex[] = [];
-  vertices: Float32Array = new Float32Array();
+  private _verticesArray: number[] = [];
+  vertices: Float32Array = new Float32Array(0);
   typedVertices: Float32Array = new Float32Array();
   dataFormat: "Array" | "GeoJson.FeatureCollection";
   settings: Partial<IIconPointsSettings>;
@@ -230,6 +231,8 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
 
     // console.log("icon-points render preparations complete");
 
+    // Convert the working array to Float32Array for WebGL
+    this.vertices = new Float32Array(this._verticesArray);
     return this;
   }
 
@@ -249,7 +252,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   resetVertices(): this {
     this.latLngLookup = {};
     this.allLatLngLookup = [];
-    this.vertices = [];
+    this._verticesArray = [];
 
     const {
       vertices,
@@ -353,7 +356,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
         // console.log("Static size", chosenSize);
       }
 
-      vertices.push(
+      this._verticesArray.push(
         // vertex
         pixel.x - mapCenterPixels.x,
         pixel.y - mapCenterPixels.y,
