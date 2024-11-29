@@ -1,0 +1,11 @@
+{
+  "files.exclude": {
+    "**/*.test.ts": true
+  },
+  "search.exclude": {
+    "**/*.test.ts": true
+  },
+  "files.watcherExclude": {
+    "**/*.test.ts": true
+  }
+}
