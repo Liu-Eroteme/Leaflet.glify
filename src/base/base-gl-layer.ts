@@ -91,6 +91,7 @@ export interface IBaseGlLayerSettings {
   latitudeKey: number;
   pane: string;
   map: Map;
+  renderMetrics?: boolean;
   contextOptions?: IWebGLContextOptions;
   shaderVariables?: {
     [name: string]: IShaderVariable;
@@ -134,8 +135,8 @@ export abstract class BaseGlLayer<
   program: WebGLProgram | null;
   settings: Partial<IBaseGlLayerSettings>;
   vertexShader: WebGLShader | null;
-  vertices: Float32Array;
-  vertexLines: Float32Array;
+  vertices: Float32Array = new Float32Array(0);
+  vertexLines: Float32Array = new Float32Array(0);
   mapCenterPixels: IPixel;
   
   protected readonly glState: {
@@ -512,7 +513,9 @@ export abstract class BaseGlLayer<
       this.map.removeLayer(this.layer);
       this.active = false;
     } else {
-      const features = this.settings.data.features || this.settings.data;
+      const features = Array.isArray(this.settings.data) 
+        ? this.settings.data 
+        : this.settings.data.features;
       indices = indices instanceof Array ? indices : [indices];
       if (typeof indices === "number") {
         indices = [indices];
@@ -532,7 +535,9 @@ export abstract class BaseGlLayer<
 
   insert(features: any | any[], index: number): this {
     const featuresArray = Array.isArray(features) ? features : [features];
-    const featuresData = this.settings.data.features || this.settings.data;
+    const featuresData = Array.isArray(this.settings.data) 
+      ? this.settings.data 
+      : this.settings.data.features;
 
     for (let i = 0; i < featuresArray.length; i++) {
       featuresData.splice(index + i, 0, featuresArray[i]);
@@ -542,7 +547,9 @@ export abstract class BaseGlLayer<
   }
 
   update(feature: any | any[], index: number): this {
-    const featuresData = this.settings.data.features || this.settings.data;
+    const featuresData = Array.isArray(this.settings.data) 
+      ? this.settings.data 
+      : this.settings.data.features;
 
     if (Array.isArray(feature)) {
       for (let i = 0; i < feature.length; i++) {
