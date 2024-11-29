@@ -344,6 +344,27 @@ export class CanvasOverlay extends Layer {
     this.eventEmitter.emit(CanvasOverlayEventType.ANIMATION_END);
   }
 
+  private _animateFrame() {
+    if (!this._animationState.isAnimating) return;
+
+    const now = performance.now();
+    const elapsed = now - this._animationState.startTime;
+    const progress = Math.min(elapsed / this._animationState.duration, 1);
+
+    if (progress < 1) {
+      // Continue animation
+      const easeProgress = this._animationState.easingFunction 
+        ? this._animationState.easingFunction(progress)
+        : progress;
+      
+      this._redraw();
+      requestAnimationFrame(() => this._animateFrame());
+    } else {
+      // Animation complete
+      this.stopAnimation();
+    }
+  }
+
   setDrawOptions(options: Partial<IDrawOptions>) {
     this._drawOptions = { ...this._drawOptions, ...options };
     return this;
