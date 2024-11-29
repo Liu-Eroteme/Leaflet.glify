@@ -290,18 +290,15 @@ export abstract class BaseGlLayer<
     this.program = null;
     this.matrix = null;
 
-    // Initialize WebGL context with configured options
-    if (settings.contextOptions) {
-      console.log("BaseGlLayer constructor - Using custom context options");
-      this.gl = this.initWebGLContext(settings.contextOptions);
-    }
     try {
       this.mapCenterPixels = this.map.project(this.map.getCenter(), 0);
     } catch (err) {
       this.mapCenterPixels = { x: -0, y: -0 };
     }
+
     const preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
 
+    // Create and setup canvas overlay
     const layer = (this.layer = new CanvasOverlay(
       (context: ICanvasOverlayDrawEvent) => {
         this._context = context;
@@ -310,6 +307,7 @@ export abstract class BaseGlLayer<
       this.pane
     ).addTo(this.map));
 
+    // Setup event listeners
     layer.eventEmitter.on("movestart", this.startDragCaching.bind(this));
     layer.eventEmitter.on("moveend", this.stopDragCaching.bind(this));
     layer.eventEmitter.on("zoomstart", this.startDragCaching.bind(this));
@@ -318,68 +316,96 @@ export abstract class BaseGlLayer<
     layer.eventEmitter.on("dragend", this.stopDragCaching.bind(this));
 
     if (!layer.canvas) {
-      throw new Error(notProperlyDefined("layer.canvas"));
+      console.error("Canvas creation failed in layer");
+      throw new Error("Canvas creation failed");
     }
+
     const canvas = (this.canvas = layer.canvas);
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
+
+    // Setup canvas properties
+    canvas.width = canvas.clientWidth || 300; // Fallback width
+    canvas.height = canvas.clientHeight || 150; // Fallback height
     canvas.style.position = "absolute";
     if (this.className) {
       canvas.className += " " + this.className;
     }
+
+    // Log canvas diagnostics
+    console.log("Canvas setup details:", {
+      width: canvas.width,
+      height: canvas.height,
+      style: canvas.style.cssText,
+      offsetWidth: canvas.offsetWidth,
+      offsetHeight: canvas.offsetHeight,
+      clientWidth: canvas.clientWidth,
+      clientHeight: canvas.clientHeight,
+      inDocument: document.contains(canvas)
+    });
+
+    // Initialize WebGL with detailed error checking
     console.log("BaseGlLayer constructor - Starting GL context initialization");
-    console.log(
-      "BaseGlLayer constructor - Canvas element:",
-      canvas ? "exists" : "null"
-    );
+    
+    const contextAttributes = {
+      preserveDrawingBuffer,
+      antialias: true,
+      alpha: true,
+      depth: true,
+      stencil: true,
+      failIfMajorPerformanceCaveat: false,
+      powerPreference: 'high-performance'
+    };
 
     try {
-      const gl = canvas.getContext("webgl2", {
-        preserveDrawingBuffer,
-        antialias: true,
-      });
-
-      console.log(
-        "BaseGlLayer constructor - WebGL2 context:",
-        gl ? "obtained" : "failed"
-      );
-
-      if (!gl) {
-        const gl1 = canvas.getContext("webgl", { preserveDrawingBuffer });
-        console.log(
-          "BaseGlLayer constructor - WebGL1 context:",
-          gl1 ? "obtained" : "failed"
-        );
-
-        if (!gl1) {
-          const glExperimental = canvas.getContext("experimental-webgl", {
-            preserveDrawingBuffer,
-          });
-          console.log(
-            "BaseGlLayer constructor - Experimental WebGL context:",
-            glExperimental ? "obtained" : "failed"
-          );
-
-          if (!glExperimental) {
-            console.error(
-              "BaseGlLayer constructor - All WebGL context creation attempts failed"
-            );
-            throw new Error("Failed to initialize WebGL context");
-          }
-          this.gl = glExperimental as WebGLRenderingContext;
-        } else {
-          this.gl = gl1 as WebGLRenderingContext;
-        }
-      } else {
-        this.gl = gl as WebGLRenderingContext;
+      // Try WebGL2 first
+      console.log("Attempting WebGL2 context creation with attributes:", contextAttributes);
+      const gl2 = canvas.getContext('webgl2', contextAttributes);
+      
+      if (gl2) {
+        console.log("WebGL2 context created successfully");
+        this.gl = gl2;
+        this.logWebGLCapabilities(gl2);
+        return;
+      }
+      
+      // Try WebGL1
+      console.log("WebGL2 failed, attempting WebGL1");
+      const gl1 = canvas.getContext('webgl', contextAttributes);
+      
+      if (gl1) {
+        console.log("WebGL1 context created successfully");
+        this.gl = gl1;
+        this.logWebGLCapabilities(gl1);
+        return;
+      }
+      
+      // Try experimental-webgl
+      console.log("WebGL1 failed, attempting experimental-webgl");
+      const glExp = canvas.getContext('experimental-webgl', contextAttributes);
+      
+      if (glExp) {
+        console.log("Experimental WebGL context created successfully");
+        this.gl = glExp;
+        this.logWebGLCapabilities(glExp);
+        return;
       }
 
-      console.log(
-        "BaseGlLayer constructor - Final GL context:",
-        this.gl ? "initialized" : "null"
-      );
+      // Log WebGL support information
+      console.error("WebGL Support Check:", {
+        webgl2Available: !!canvas.getContext('webgl2'),
+        webglAvailable: !!canvas.getContext('webgl'),
+        experimentalAvailable: !!canvas.getContext('experimental-webgl'),
+        contextAttributes: contextAttributes
+      });
+
+      throw new Error("Could not create any WebGL context");
     } catch (err) {
-      console.error("BaseGlLayer constructor - WebGL2 context creation failed");
+      console.error("WebGL context creation error:", err);
+      console.error("Browser:", navigator.userAgent);
+      console.error("WebGL support:", {
+        webgl2: 'WebGL2RenderingContext' in window,
+        webgl: 'WebGLRenderingContext' in window
+      });
+      throw new Error(`WebGL initialization failed: ${err.message}`);
     }
   }
 
@@ -419,6 +445,18 @@ export abstract class BaseGlLayer<
     state.data = data;
     state.isDirty = true;
     state.lastUpdateTime = performance.now();
+  }
+
+  private logWebGLCapabilities(gl: WebGLRenderingContext | WebGL2RenderingContext) {
+    console.log("WebGL Capabilities:", {
+      version: gl.getParameter(gl.VERSION),
+      vendor: gl.getParameter(gl.VENDOR),
+      renderer: gl.getParameter(gl.RENDERER),
+      maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+      maxViewportDims: gl.getParameter(gl.MAX_VIEWPORT_DIMS),
+      maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
+      extensions: gl.getSupportedExtensions()
+    });
   }
 
   protected getRenderMetrics(): Partial<typeof this.glState> {
