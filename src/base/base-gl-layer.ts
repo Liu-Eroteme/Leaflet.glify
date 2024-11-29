@@ -339,12 +339,12 @@ export abstract class BaseGlLayer<
       offsetHeight: canvas.offsetHeight,
       clientWidth: canvas.clientWidth,
       clientHeight: canvas.clientHeight,
-      inDocument: document.contains(canvas)
+      inDocument: document.contains(canvas),
     });
 
     // Initialize WebGL with detailed error checking
     console.log("BaseGlLayer constructor - Starting GL context initialization");
-    
+
     const contextAttributes = {
       preserveDrawingBuffer,
       antialias: true,
@@ -352,36 +352,48 @@ export abstract class BaseGlLayer<
       depth: true,
       stencil: true,
       failIfMajorPerformanceCaveat: false,
-      powerPreference: 'high-performance'
+      powerPreference: "high-performance",
     };
 
     try {
       // Try WebGL2 first
-      console.log("Attempting WebGL2 context creation with attributes:", contextAttributes);
-      const gl2 = canvas.getContext('webgl2', contextAttributes) as WebGL2RenderingContext | null;
-      
+      console.log(
+        "Attempting WebGL2 context creation with attributes:",
+        contextAttributes
+      );
+      const gl2 = canvas.getContext(
+        "webgl2",
+        contextAttributes
+      ) as WebGL2RenderingContext | null;
+
       if (gl2) {
         console.log("WebGL2 context created successfully");
         this.gl = gl2;
         this.logWebGLCapabilities(gl2);
         return;
       }
-      
+
       // Try WebGL1
       console.log("WebGL2 failed, attempting WebGL1");
-      const gl1 = canvas.getContext('webgl', contextAttributes) as WebGLRenderingContext | null;
-      
+      const gl1 = canvas.getContext(
+        "webgl",
+        contextAttributes
+      ) as WebGLRenderingContext | null;
+
       if (gl1) {
         console.log("WebGL1 context created successfully");
         this.gl = gl1;
         this.logWebGLCapabilities(gl1);
         return;
       }
-      
+
       // Try experimental-webgl
       console.log("WebGL1 failed, attempting experimental-webgl");
-      const glExp = canvas.getContext('experimental-webgl', contextAttributes) as WebGLRenderingContext | null;
-      
+      const glExp = canvas.getContext(
+        "experimental-webgl",
+        contextAttributes
+      ) as WebGLRenderingContext | null;
+
       if (glExp) {
         console.log("Experimental WebGL context created successfully");
         this.gl = glExp;
@@ -391,10 +403,10 @@ export abstract class BaseGlLayer<
 
       // Log WebGL support information
       console.error("WebGL Support Check:", {
-        webgl2Available: !!canvas.getContext('webgl2'),
-        webglAvailable: !!canvas.getContext('webgl'),
-        experimentalAvailable: !!canvas.getContext('experimental-webgl'),
-        contextAttributes: contextAttributes
+        webgl2Available: !!canvas.getContext("webgl2"),
+        webglAvailable: !!canvas.getContext("webgl"),
+        experimentalAvailable: !!canvas.getContext("experimental-webgl"),
+        contextAttributes: contextAttributes,
       });
 
       throw new Error("Could not create any WebGL context");
@@ -402,10 +414,12 @@ export abstract class BaseGlLayer<
       console.error("WebGL context creation error:", err);
       console.error("Browser:", navigator.userAgent);
       console.error("WebGL support:", {
-        webgl2: 'WebGL2RenderingContext' in window,
-        webgl: 'WebGLRenderingContext' in window
+        webgl2: "WebGL2RenderingContext" in window,
+        webgl: "WebGLRenderingContext" in window,
       });
-      throw new Error(`WebGL initialization failed: ${err instanceof Error ? err.message : String(err)}`);
+      throw new Error(
+        `WebGL initialization failed: ${err instanceof Error ? err.message : String(err)}`
+      );
     }
   }
 
@@ -447,7 +461,9 @@ export abstract class BaseGlLayer<
     state.lastUpdateTime = performance.now();
   }
 
-  private logWebGLCapabilities(gl: WebGLRenderingContext | WebGL2RenderingContext) {
+  private logWebGLCapabilities(
+    gl: WebGLRenderingContext | WebGL2RenderingContext
+  ) {
     console.log("WebGL Capabilities:", {
       version: gl.getParameter(gl.VERSION),
       vendor: gl.getParameter(gl.VENDOR),
@@ -455,7 +471,7 @@ export abstract class BaseGlLayer<
       maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
       maxViewportDims: gl.getParameter(gl.MAX_VIEWPORT_DIMS),
       maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
-      extensions: gl.getSupportedExtensions()
+      extensions: gl.getSupportedExtensions(),
     });
   }
 
