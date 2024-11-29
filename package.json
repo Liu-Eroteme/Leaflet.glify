@@ -5,6 +5,7 @@
   "main": "dist/glify.js",
   "browser": "dist/glify-browser.js",
   "module": "dist/glify-browser.js",
+  "types": "src/types/leaflet-glify.d.ts",
   "files": [
     "/src",
     "/dist"

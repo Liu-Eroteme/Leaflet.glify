@@ -227,6 +227,10 @@ declare module "leaflet" {
             GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon> | 
             GeoJSON.MultiPolygon | 
             number[][];
+      /** Enable border rendering for shapes */
+      border?: boolean;
+      /** Opacity value for shape borders (0-1) */
+      borderOpacity?: number;
       border?: boolean;
       borderOpacity?: number;
       setupClick?: (map: L.Map) => void;
