@@ -1,6 +1,28 @@
 // File info: base-gl-layer.ts
 // INFO: Core abstract class for WebGL-based Leaflet layers
 
+// NOTE: WebGL shader and buffer configuration types
+export interface IShaderConfig {
+  vertexSource: string;
+  fragmentSource: string;
+  attributes: Record<string, {
+    location: number;
+    size: number;
+    type: number;
+    normalized: boolean;
+    stride: number;
+    offset: number;
+  }>;
+  uniforms: Record<string, WebGLUniformLocation>;
+}
+
+export interface IBufferState {
+  buffer: WebGLBuffer | null;
+  data: Float32Array | null;
+  isDirty: boolean;
+  lastUpdateTime: number;
+}
+
 import { LeafletMouseEvent, Map, LatLng, Layer } from "leaflet";
 
 import { IColor } from "./color";
@@ -39,6 +61,10 @@ export interface IWebGLContextOptions {
   alpha?: boolean;
   depth?: boolean;
   stencil?: boolean;
+  premultipliedAlpha?: boolean;
+  failIfMajorPerformanceCaveat?: boolean;
+  powerPreference?: 'default' | 'high-performance' | 'low-power';
+  desynchronized?: boolean;
 }
 
 // NOTE: WebGL buffer configuration
@@ -116,11 +142,26 @@ export abstract class BaseGlLayer<
     isContextLost: boolean;
     lastFrameTime: number;
     frameCount: number;
+    drawCalls: number;
+    vertexCount: number;
+    fps: number;
+    shaderCompileTime: number;
+    bufferUploadTime: number;
+    renderTime: number;
   } = {
     isContextLost: false,
     lastFrameTime: 0,
-    frameCount: 0
+    frameCount: 0,
+    drawCalls: 0,
+    vertexCount: 0,
+    fps: 0,
+    shaderCompileTime: 0,
+    bufferUploadTime: 0,
+    renderTime: 0
   };
+
+  protected shaderConfig: IShaderConfig | null = null;
+  protected bufferStates: Record<string, IBufferState> = {};
 
   buffers: { [name: string]: WebGLBuffer } = {};
   attributeLocations: { [name: string]: number } = {};
@@ -236,6 +277,11 @@ export abstract class BaseGlLayer<
     this.matrix = null;
     this.vertices = null;
     this.vertexLines = null;
+
+    // Initialize WebGL context with configured options
+    if (settings.contextOptions) {
+      this.gl = this.initWebGLContext(settings.contextOptions);
+    }
     try {
       this.mapCenterPixels = this.map.project(this.map.getCenter(), 0);
     } catch (err) {
@@ -276,6 +322,55 @@ export abstract class BaseGlLayer<
       canvas.getContext("experimental-webgl", {
         preserveDrawingBuffer,
       })) as WebGLRenderingContext;
+  }
+
+  protected initWebGLContext(options: IWebGLContextOptions): WebGLRenderingContext | WebGL2RenderingContext {
+    if (!this.canvas) {
+      throw new Error('Canvas not initialized');
+    }
+
+    const contextTypes: string[] = ['webgl2', 'webgl', 'experimental-webgl'];
+    let context: WebGLRenderingContext | WebGL2RenderingContext | null = null;
+
+    for (const type of contextTypes) {
+      context = this.canvas.getContext(type, options) as WebGLRenderingContext | WebGL2RenderingContext;
+      if (context) {
+        if (type === 'webgl2') {
+          return context as WebGL2RenderingContext;
+        }
+        return context as WebGLRenderingContext;
+      }
+    }
+
+    throw new Error('WebGL not supported');
+  }
+
+  protected updateBufferState(name: string, data: Float32Array): void {
+    const state = this.bufferStates[name] = this.bufferStates[name] || {
+      buffer: this.gl.createBuffer(),
+      data: null,
+      isDirty: true,
+      lastUpdateTime: 0
+    };
+
+    state.data = data;
+    state.isDirty = true;
+    state.lastUpdateTime = performance.now();
+  }
+
+  protected getRenderMetrics(): Partial<typeof this.glState> {
+    if (!this.settings.renderMetrics) {
+      return {};
+    }
+
+    return {
+      drawCalls: this.glState.drawCalls,
+      vertexCount: this.glState.vertexCount,
+      fps: this.glState.fps,
+      renderTime: this.glState.renderTime,
+      shaderCompileTime: this.glState.shaderCompileTime,
+      bufferUploadTime: this.glState.bufferUploadTime
+    };
   }
 
   abstract drawOnCanvas(context: ICanvasOverlayDrawEvent): this;
