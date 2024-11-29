@@ -74,14 +74,26 @@ declare module "leaflet" {
 
     // NOTE: Layer-specific options interfaces
     interface PointsOptions extends IGlifyLayerOptions {
-      sensitivity?: number;
-      sensitivityHover?: number;
+      sensitivity?: number; // Multiplier for click detection radius
+      sensitivityHover?: number; // Multiplier for hover detection radius
       click?: EventCallback;
       hover?: EventCallback;
       hoverOff?: EventCallback;
       setupClick?: (map: L.Map) => void;
       setupHover?: SetupHoverCallback;
       hoverWait?: number;
+      eachVertex?: (vertex: IPointVertex) => void; // Callback for each vertex during initialization
+      size?: number | ((index: number, latLng: L.LatLng | null) => number); // Point size in pixels
+    }
+
+    // Add interface for point vertex data
+    interface IPointVertex {
+      latLng: L.LatLng;
+      pixel: L.Point;
+      chosenColor: IColor;
+      chosenSize: number;
+      key: string;
+      feature?: any; // Could be GeoJSON.Feature or raw coordinates
     }
 
     // NOTE: Interface for vertex data in IconPoints
@@ -129,12 +141,13 @@ declare module "leaflet" {
     }
 
     interface IGlifyLayer {
-      update(data: [number, number][] | GeoJSON.Feature<GeoJSON.Point>, index: number): void;
-      updateAll(data: number[][] | FeatureCollection): void;
-      remove(): void;
-      render(): void;
-      addTo(map: L.Map): this;
+      update(data: [number, number][] | GeoJSON.Feature<GeoJSON.Point>, index: number): this;
+      updateAll(data: number[][] | FeatureCollection): this;
+      remove(indices?: number | number[]): this; // Optional indices for partial removal
+      render(): this;
+      addTo(map?: L.Map): this; // Map parameter is optional
       setData(data: [number, number][] | GeoJSON.FeatureCollection<GeoJSON.Point>): this;
+      insert(features: any | any[], index: number): this; // Add insert method
     }
 
     interface PointsInstance extends IGlifyLayer {}
