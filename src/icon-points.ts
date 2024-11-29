@@ -399,7 +399,6 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
         processVertex(i, null);
       }
     } else if (this.dataFormat === "GeoJson.FeatureCollection") {
-      console.log("Processing GeoJson.FeatureCollection data");
       // console.log("Processing GeoJson.FeatureCollection data");
       const max = data.features.length;
       // console.log(`Features length: ${max}`);
