@@ -2,6 +2,34 @@
 // NOTE: Originally based on http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOverlay.js
 // WARN: Custom modifications for WebGL rendering and performance optimizations
 
+// NOTE: Standardized event types for canvas overlay
+export enum CanvasOverlayEventType {
+  BEFORE_DRAW = 'beforeDraw',
+  AFTER_DRAW = 'afterDraw',
+  ANIMATION_START = 'animationStart',
+  ANIMATION_END = 'animationEnd',
+  CONTEXT_LOST = 'contextLost',
+  CONTEXT_RESTORED = 'contextRestored'
+}
+
+// NOTE: Animation state tracking
+export interface IAnimationState {
+  isAnimating: boolean;
+  startTime: number;
+  duration: number;
+  easingFunction?: (t: number) => number;
+}
+
+// NOTE: Extended draw options for more control
+export interface IDrawOptions {
+  clearCanvas?: boolean;
+  useAnimationFrame?: boolean;
+  preserveDrawingBuffer?: boolean;
+  antialiasing?: boolean;
+  alpha?: boolean;
+  premultipliedAlpha?: boolean;
+}
+
  /* Generic  Canvas Overlay for leaflet,
  Stanislav Sumbera, April , 2014
 
@@ -50,6 +78,11 @@ export interface ICanvasOverlayOptions extends LayerOptions {
   animated?: boolean;
   updateWhenIdle?: boolean;
   updateWhenZooming?: boolean;
+  drawOptions?: IDrawOptions;
+  animationOptions?: {
+    duration?: number;
+    easing?: (t: number) => number;
+  };
 }
 
 // NOTE: Internal state tracking interfaces
@@ -78,8 +111,21 @@ export interface IRenderStats {
 
 export class CanvasOverlay extends Layer {
   private _isDragging: boolean = false;
-
+  private _animationState: IAnimationState = {
+    isAnimating: false,
+    startTime: 0,
+    duration: 300 // Default animation duration
+  };
+  
   public eventEmitter: EventEmitter;
+  private _drawOptions: IDrawOptions = {
+    clearCanvas: true,
+    useAnimationFrame: true,
+    preserveDrawingBuffer: false,
+    antialiasing: true,
+    alpha: true,
+    premultipliedAlpha: true
+  };
 
   _userDrawFunc: IUserDrawFunc;
   _redrawCallbacks: RedrawCallback[];
@@ -89,6 +135,26 @@ export class CanvasOverlay extends Layer {
   _frame?: number | null;
   _leaflet_id?: number;
   options: LayerOptions;
+
+  // NOTE: Performance metrics tracking
+  private _metrics = {
+    lastFrameTime: 0,
+    frameCount: 0,
+    fps: 0,
+    drawTime: 0,
+    drawCalls: 0,
+    vertexCount: 0
+  };
+
+  // NOTE: Lifecycle hooks
+  private _hooks = {
+    beforeInit: new Set<() => void>(),
+    afterInit: new Set<() => void>(),
+    beforeDraw: new Set<() => void>(),
+    afterDraw: new Set<() => void>(),
+    beforeDestroy: new Set<() => void>(),
+    afterDestroy: new Set<() => void>()
+  };
 
   constructor(userDrawFunc: IUserDrawFunc, pane: string) {
     super();
@@ -231,6 +297,58 @@ export class CanvasOverlay extends Layer {
     return this;
   }
 
+  // NOTE: Performance monitoring methods
+  getMetrics() {
+    return { ...this._metrics };
+  }
+
+  private _updateMetrics(drawTime: number) {
+    const now = performance.now();
+    this._metrics.drawTime = drawTime;
+    this._metrics.frameCount++;
+    
+    if (now - this._metrics.lastFrameTime >= 1000) {
+      this._metrics.fps = this._metrics.frameCount;
+      this._metrics.frameCount = 0;
+      this._metrics.lastFrameTime = now;
+    }
+  }
+
+  // NOTE: Lifecycle hook methods
+  addHook(type: keyof typeof this._hooks, fn: () => void): this {
+    this._hooks[type].add(fn);
+    return this;
+  }
+
+  removeHook(type: keyof typeof this._hooks, fn: () => void): this {
+    this._hooks[type].delete(fn);
+    return this;
+  }
+
+  private _runHooks(type: keyof typeof this._hooks) {
+    this._hooks[type].forEach(fn => fn());
+  }
+
+  // NOTE: Animation control methods
+  startAnimation(duration?: number, easing?: (t: number) => number) {
+    this._animationState.isAnimating = true;
+    this._animationState.startTime = performance.now();
+    this._animationState.duration = duration ?? this._animationState.duration;
+    this._animationState.easingFunction = easing;
+    this.eventEmitter.emit(CanvasOverlayEventType.ANIMATION_START);
+    this._animateFrame();
+  }
+
+  stopAnimation() {
+    this._animationState.isAnimating = false;
+    this.eventEmitter.emit(CanvasOverlayEventType.ANIMATION_END);
+  }
+
+  setDrawOptions(options: Partial<IDrawOptions>) {
+    this._drawOptions = { ...this._drawOptions, ...options };
+    return this;
+  }
+
   get map(): Map {
     return this._map;
   }
@@ -258,17 +376,28 @@ export class CanvasOverlay extends Layer {
   }
 
   _redraw(): void {
-    // console.log("canvas-overlay.ts: _redraw");
+    const drawStart = performance.now();
     const { _map, canvas } = this;
-    const size = _map.getSize();
-    const bounds = _map.getBounds();
-    const zoomScale =
-      (size.x * 180) / (20037508.34 * (bounds.getEast() - bounds.getWest())); // resolution = 1/zoomScale
-    const zoom = _map.getZoom();
-    const topLeft = new LatLng(bounds.getNorth(), bounds.getWest());
-    const offset = this._unclampedProject(topLeft, 0);
+    
+    // Run pre-draw hooks
+    this._runHooks('beforeDraw');
+    this.eventEmitter.emit(CanvasOverlayEventType.BEFORE_DRAW);
+
     if (canvas) {
-      // console.log("canvas-overlay.ts: _userDrawFunc");
+      const size = _map.getSize();
+      const bounds = _map.getBounds();
+      const zoomScale = (size.x * 180) / (20037508.34 * (bounds.getEast() - bounds.getWest()));
+      const zoom = _map.getZoom();
+      const topLeft = new LatLng(bounds.getNorth(), bounds.getWest());
+      const offset = this._unclampedProject(topLeft, 0);
+
+      // Clear canvas if specified in draw options
+      if (this._drawOptions.clearCanvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // Execute draw function with enhanced context
       this._userDrawFunc({
         bounds,
         canvas,
@@ -277,18 +406,26 @@ export class CanvasOverlay extends Layer {
         size,
         zoomScale,
         zoom,
+        timestamp: performance.now()
       });
-      // console.log("canvas-overlay.ts: emitting drawend");
+
+      // Update performance metrics
+      this._updateMetrics(performance.now() - drawStart);
     }
 
+    // Process callbacks
     while (this._redrawCallbacks.length > 0) {
       const callback = this._redrawCallbacks.shift();
-      if (callback) {
-        callback(this);
-      }
+      if (callback) callback(this);
     }
 
-    this._frame = null;
+    // Run post-draw hooks
+    this._runHooks('afterDraw');
+    this.eventEmitter.emit(CanvasOverlayEventType.AFTER_DRAW);
+
+    this._frame = this._drawOptions.useAnimationFrame ? 
+      requestAnimationFrame(() => this._redraw()) : 
+      null;
   }
 
   _animateZoom(e: ZoomAnimEvent): void {
