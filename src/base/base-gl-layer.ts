@@ -519,7 +519,7 @@ export abstract class BaseGlLayer<
     } else {
       const features = Array.isArray(this.settings.data) 
         ? this.settings.data 
-        : this.settings.data.features;
+        : this.isFeatureCollection(this.settings.data) ? this.settings.data.features : [];
       indices = indices instanceof Array ? indices : [indices];
       if (typeof indices === "number") {
         indices = [indices];
@@ -541,7 +541,7 @@ export abstract class BaseGlLayer<
     const featuresArray = Array.isArray(features) ? features : [features];
     const featuresData = Array.isArray(this.settings.data) 
       ? this.settings.data 
-      : this.settings.data.features;
+      : this.isFeatureCollection(this.settings.data) ? this.settings.data.features : [];
 
     for (let i = 0; i < featuresArray.length; i++) {
       featuresData.splice(index + i, 0, featuresArray[i]);
@@ -553,7 +553,7 @@ export abstract class BaseGlLayer<
   update(feature: any | any[], index: number): this {
     const featuresData = Array.isArray(this.settings.data) 
       ? this.settings.data 
-      : this.settings.data.features;
+      : this.isFeatureCollection(this.settings.data) ? this.settings.data.features : [];
 
     if (Array.isArray(feature)) {
       for (let i = 0; i < feature.length; i++) {
