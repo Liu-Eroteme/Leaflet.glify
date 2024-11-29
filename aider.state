@@ -1,0 +1,9 @@
+/drop
+/add       aider_iwm.txt
+/add       src/util/color.ts
+/add       src/util/errors.ts
+/add       src/util/map-matrix.ts
+/add       src/util/pixel.ts
+/add       src/types/leaflet-glify.d.ts
+/add       src/base/base-gl-layer.ts
+/add       src/base/canvas-overlay.ts

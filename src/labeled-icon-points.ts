@@ -851,7 +851,7 @@ class LabeledIconPoints extends IconPoints {
 
     features.forEach((feature, index) => {
       const zOffset = index * (4 * increment);
-      console.log(`Processing feature ${index}:`, feature);
+      // console.log(`Processing feature ${index}:`, feature);
 
       // console.log("calling getLabelText with index:", index);
       const text = this.getLabelText(
@@ -859,12 +859,12 @@ class LabeledIconPoints extends IconPoints {
         index
       );
       // console.log("Label text:", text);
-      console.log("get latlong");
+      // console.log("get latlong");
 
       // INFO THIS IS DUMB!
       const rawLatLng = this.allLatLngLookup[index].latLng;
 
-      console.log("gotten");
+      // console.log("gotten");
 
       const pixel = this.map.project(rawLatLng, 0);
       const position: [number, number] = [
