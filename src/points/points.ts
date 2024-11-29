@@ -23,6 +23,8 @@ export interface IPointsSettings extends IBaseGlLayerSettings {
   eachVertex?: (pointVertex: IPointVertex) => void;
   sensitivity?: number;
   sensitivityHover?: number;
+  setupClick?: (map: Map) => void;
+  setupHover?: (map: Map, hoverWait?: number, immediate?: false) => void;
 }
 
 const defaults: Partial<IPointsSettings> = {

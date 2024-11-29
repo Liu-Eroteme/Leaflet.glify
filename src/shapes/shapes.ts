@@ -27,6 +27,8 @@ export interface IShapesSettings extends IBaseGlLayerSettings {
   border?: boolean;
   borderOpacity?: number;
   data: Feature | FeatureCollection | MultiPolygon;
+  setupClick?: (map: Map) => void;
+  setupHover?: (map: Map, hoverWait?: number, immediate?: false) => void;
 }
 
 export const defaults: Partial<IShapesSettings> = {

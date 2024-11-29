@@ -26,6 +26,8 @@ export interface ILinesSettings extends IBaseGlLayerSettings {
   sensitivity?: number;
   sensitivityHover?: number;
   eachVertex?: (vertices: LineFeatureVertices) => void;
+  setupClick?: (map: Map) => void;
+  setupHover?: (map: Map, hoverWait?: number, immediate?: false) => void;
 }
 
 const defaults: Partial<ILinesSettings> = {
