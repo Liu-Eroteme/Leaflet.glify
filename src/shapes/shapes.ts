@@ -26,7 +26,7 @@ import glify from "../index";
 export interface IShapesSettings extends IBaseGlLayerSettings {
   border?: boolean;
   borderOpacity?: number;
-  data: Feature | FeatureCollection | MultiPolygon;
+  data: Feature | FeatureCollection | MultiPolygon | number[][];
   setupClick?: (map: Map) => void;
   setupHover?: (map: Map, hoverWait?: number, immediate?: false) => void;
 }
@@ -41,11 +41,13 @@ export const defaults: Partial<IShapesSettings> = {
       type: "FLOAT",
       start: 0,
       size: 2,
+      normalize: false
     },
     color: {
       type: "FLOAT",
       start: 2,
       size: 4,
+      normalize: false
     },
   },
   border: false,
@@ -92,7 +94,7 @@ export class Shapes extends BaseGlLayer {
 
     const { canvas, gl, layer, vertices, mapMatrix } = this;
     const vertexBuffer = this.getBuffer("vertex");
-    const vertexArray = new Float32Array(vertices);
+    const vertexArray = new Float32Array(this.vertices);
     const byteCount = vertexArray.BYTES_PER_ELEMENT;
     const vertexLocation = this.getAttributeLocation("vertex");
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
@@ -125,8 +127,8 @@ export class Shapes extends BaseGlLayer {
   }
 
   resetVertices(): this {
-    this.vertices = [];
-    this.vertexLines = [];
+    this.vertices.length = 0;
+    this.vertexLines.length = 0;
     this.polygonLookup = new PolygonLookup();
 
     const {

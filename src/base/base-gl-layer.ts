@@ -135,8 +135,8 @@ export abstract class BaseGlLayer<
   program: WebGLProgram | null;
   settings: Partial<IBaseGlLayerSettings>;
   vertexShader: WebGLShader | null;
-  vertices: Float32Array = new Float32Array(0);
-  vertexLines: Float32Array = new Float32Array(0);
+  vertices: number[] = [];
+  vertexLines: number[] = [];
   mapCenterPixels: IPixel;
   
   protected readonly glState: {
