@@ -1,61 +1,59 @@
 I am assisting with the Leaflet-Glify library, a WebGL rendering extension for Leaflet maps. Here are the key
-points I've learned:
+points I've learned and recent developments:
 
- 1 Core Architecture:
+1 Core Architecture:
+[Previous points remain valid, architecture is stable]
 
- • The library is built on a BaseGlLayer abstract class that handles WebGL context and shader management
- • CanvasOverlay provides the bridge between Leaflet and WebGL rendering
- • Each layer type (Points, Lines, Shapes, IconPoints) extends BaseGlLayer
+2 Recent Improvements:
+[Previous improvements remain, plus:]
+• Properly configured types exposure in package.json
+• Enhanced documentation in type definitions
+• Verified consistency between auto-generated and manual types
 
- 2 Recent Improvements:
+3 Type System Deep Dive:
 
- • Enhanced WebGL context handling with better configuration options
- • Added performance metrics tracking
- • Implemented animation state management
- • Added lifecycle hooks for better control
- • Improved buffer state tracking
- • Added standardized event types
+• Manual types (leaflet-glify.d.ts):
+  - Properly namespaced under leaflet.glify
+  - Focuses on public API surface
+  - Includes well-documented interfaces
+  - Handles Leaflet namespace augmentation correctly
 
- 3 Key Components:
+• Auto-generated types:
+  - More granular and implementation-focused
+  - Useful for internal development
+  - Properly reflect actual code structure
 
- • MapMatrix: Handles coordinate transformations
- • Color utilities: Color management and conversion
- • Shader management: Both vertex and fragment shaders
- • Buffer management: Vertex data handling
+• Type Strategy:
+  - Manual types chosen for public API
+  - Maintains clean separation between public/internal interfaces
+  - Enhanced documentation for shape settings
+  - Proper exposure through package.json types field
 
- 4 Type System:
+4 Key Components:
+[Previous components remain valid]
 
- • Extensive use of TypeScript interfaces
- • Careful handling of WebGL types
- • GeoJSON integration
-
- 5 Performance Considerations:
-
- • Buffer state tracking
- • Render metrics collection
- • Animation frame management
- • Canvas clearing options
+5 Performance Considerations:
+[Previous considerations remain valid]
 
 The library follows a pattern where each layer type:
-
- • Has its own vertex/fragment shader pair
- • Manages its own buffer data
- • Handles its own rendering logic
- • Can be configured through type-safe settings
+[Previous patterns remain valid]
 
 Current focus areas:
 
- • Improving type definitions
- • Enhancing performance monitoring
- • Better shader and buffer management
- • More flexible rendering options
+• Type system refinement:
+  - Maintaining manual/auto-generated type harmony
+  - Ensuring proper public API exposure
+  - Enhancing type documentation
+  - Verifying type consistency
 
 Next steps involve:
 
- • Restructuring folders for better organization
- • Extracting shared types and utilities
- • Improving public API typing
- • Enhancing layer-specific functionality
+• Continue monitoring type system effectiveness
+• Watch for any inconsistencies between implementation and type definitions
+• Consider adding more specific type tests
+• Look for opportunities to enhance type documentation further
 
-Remember: The library bridges Leaflet's map system with WebGL rendering, requiring careful handling of coordinate
-systems, shader management, and performance optimization.
+Remember: 
+• The library bridges Leaflet's map system with WebGL rendering
+• Type definitions are crucial for public API stability
+• Manual types in src/types/leaflet-glify.d.ts are the source of truth for public API
