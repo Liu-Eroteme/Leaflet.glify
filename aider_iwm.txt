@@ -1,66 +1,86 @@
 # Leaflet-Glify Internal World Model
 Last updated: 2024-11-29
 Updated by: AI Assistant
-Focus: Type system documentation and strategy
+Focus: Critical WebGL initialization and type system issues
 
-I am maintaining knowledge about the Leaflet-Glify library, a WebGL rendering extension for Leaflet maps.
-This document captures key architectural decisions, recent developments, and strategic direction.
+CURRENT STATUS: CRITICAL ISSUES
+The codebase is experiencing significant problems with WebGL context initialization and type system coherence.
 
-Here are the key points I've learned and recent developments:
+Key Problem Areas:
 
-1 Core Architecture:
-[Previous points remain valid, architecture is stable]
+1. WebGL Context Initialization:
+- Canvas creation and context acquisition is unreliable
+- Multiple initialization attempts causing potential conflicts
+- Inconsistent state management between parent/child classes
+- Need to consolidate WebGL setup into a single, reliable flow
 
-2 Recent Improvements:
-[Previous improvements remain, plus:]
-• Properly configured types exposure in package.json
-• Enhanced documentation in type definitions
-• Verified consistency between auto-generated and manual types
+2. Type System Issues:
+- Circular dependencies between type definitions
+- Inconsistent property declarations between base and derived classes
+- Missing or incorrect type assertions
+- Overlapping interface definitions causing conflicts
 
-3 Type System Deep Dive:
+3. Class Hierarchy Problems:
+- BaseGlLayer initialization sequence is fragile
+- Derived classes (IconPoints, etc.) have inconsistent super() calls
+- Property initialization timing issues
+- Event handler binding occurring too early
 
-• Manual types (leaflet-glify.d.ts):
-  - Properly namespaced under leaflet.glify
-  - Focuses on public API surface
-  - Includes well-documented interfaces
-  - Handles Leaflet namespace augmentation correctly
+IMMEDIATE ACTION ITEMS:
 
-• Auto-generated types:
-  - More granular and implementation-focused
-  - Useful for internal development
-  - Properly reflect actual code structure
+1. WebGL Setup:
+- Move all WebGL context initialization to BaseGlLayer
+- Implement robust fallback mechanisms
+- Add comprehensive error checking
+- Ensure single source of truth for context creation
 
-• Type Strategy:
-  - Manual types chosen for public API
-  - Maintains clean separation between public/internal interfaces
-  - Enhanced documentation for shape settings
-  - Proper exposure through package.json types field
+2. Type System:
+- Separate interface definitions to prevent cycles
+- Make property declarations consistent across hierarchy
+- Add proper type guards and assertions
+- Clean up redundant type definitions
 
-4 Key Components:
-[Previous components remain valid]
+3. Class Structure:
+- Restructure initialization sequence
+- Ensure proper super() call ordering
+- Move property initialization to appropriate lifecycle points
+- Defer event binding until after setup
 
-5 Performance Considerations:
-[Previous considerations remain valid]
+STRATEGY:
 
-The library follows a pattern where each layer type:
-[Previous patterns remain valid]
+1. Initialization Flow:
+BaseGlLayer:
+- Handle canvas creation
+- Manage WebGL context
+- Setup basic state
+- Provide clear lifecycle hooks
 
-Current focus areas:
+Derived Classes:
+- Focus on specific rendering logic
+- Use parent class facilities
+- Avoid duplicate initialization
 
-• Type system refinement:
-  - Maintaining manual/auto-generated type harmony
-  - Ensuring proper public API exposure
-  - Enhancing type documentation
-  - Verifying type consistency
+2. Type Definitions:
+- Keep interfaces focused and minimal
+- Use composition over inheritance where possible
+- Maintain clear boundaries between public/private APIs
+- Document all assumptions and requirements
 
-Next steps involve:
+3. Error Handling:
+- Add comprehensive checks
+- Provide meaningful error messages
+- Implement graceful fallbacks
+- Log diagnostic information
 
-• Continue monitoring type system effectiveness
-• Watch for any inconsistencies between implementation and type definitions
-• Consider adding more specific type tests
-• Look for opportunities to enhance type documentation further
+NEXT STEPS:
 
-Remember: 
-• The library bridges Leaflet's map system with WebGL rendering
-• Type definitions are crucial for public API stability
-• Manual types in src/types/leaflet-glify.d.ts are the source of truth for public API
+1. Revert to last known good state
+2. Implement changes incrementally
+3. Add tests for each component
+4. Validate changes in isolation
+5. Document all assumptions and requirements
+
+Remember:
+• WebGL context creation is the foundation - must be solid
+• Type system should help, not hinder development
+• Class hierarchy needs to be logical and maintainable
