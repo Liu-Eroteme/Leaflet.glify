@@ -316,14 +316,23 @@ export abstract class BaseGlLayer<
     if (this.className) {
       canvas.className += " " + this.className;
     }
-    this.gl = (canvas.getContext("webgl2", {
+    console.log('BaseGlLayer constructor - Starting GL context initialization');
+    
+    const gl = canvas.getContext("webgl2", {
       preserveDrawingBuffer,
       antialias: true,
     }) ??
       canvas.getContext("webgl", { preserveDrawingBuffer }) ??
       canvas.getContext("experimental-webgl", {
         preserveDrawingBuffer,
-      })) as WebGLRenderingContext;
+      });
+
+    if (!gl) {
+      throw new Error('Failed to initialize WebGL context');
+    }
+
+    this.gl = gl as WebGLRenderingContext;
+    console.log('BaseGlLayer constructor - GL context:', this.gl ? 'initialized' : 'null');
   }
 
   protected initWebGLContext(options: IWebGLContextOptions): WebGLRenderingContext | WebGL2RenderingContext {
