@@ -58,6 +58,8 @@ export class Shapes extends BaseGlLayer {
   static maps: Map[];
   settings: Partial<IShapesSettings>;
   bytes = 6;
+  vertices: number[] = [];
+  vertexLines: number[] = [];
   polygonLookup: PolygonLookup | null = null;
 
   get border(): boolean {
