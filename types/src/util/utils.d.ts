@@ -1,0 +1,10 @@
+import { LatLng, LatLngBounds, LeafletMouseEvent, Map } from "leaflet";
+import { IPixel } from "./pixel";
+export declare function latLonToPixel(latitude: number, longitude: number): IPixel;
+export declare function pixelInCircle(centerPixel: IPixel, checkPoint: IPixel, radius: number): boolean;
+export declare function latLngDistance(x: number, y: number, x1: number, y1: number, x2: number, y2: number): number;
+export declare function vectorDistance(dx: number, dy: number): number;
+export declare function locationDistance(location1: LatLng, location2: LatLng, map: Map): number;
+export declare function debugPoint(containerPixel: IPixel): void;
+export declare function debounce(fn: (e: LeafletMouseEvent) => void, waitMilliseconds: number, immediate?: boolean): (e: LeafletMouseEvent) => void;
+export declare function inBounds(latLng: LatLng, bounds: LatLngBounds): boolean;

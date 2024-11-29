@@ -1,0 +1,70 @@
+import { IconPoints, IIconPointsSettings } from "./icon-points";
+import { ICanvasOverlayDrawEvent } from "../base/canvas-overlay";
+import { Feature, FeatureCollection, Point as GeoPoint, GeoJsonProperties } from "geojson";
+import { LeafletMouseEvent, Map } from "leaflet";
+interface IColor {
+    r: number;
+    g: number;
+    b: number;
+    a?: number;
+}
+interface ILabeledIconPointsSettings extends IIconPointsSettings {
+    labelText?: (feature?: Feature<GeoPoint, GeoJsonProperties> | number[], index?: number) => string;
+    labelFont?: string;
+    labelColor?: IColor;
+    labelOffset?: [number, number];
+    globalScaleFactor?: number;
+    labelTextSmoothing?: number;
+    labelBackgroundColor?: IColor;
+    labelBackgroundPadding?: [number, number];
+    labelBackgroundCornerRadius?: number;
+    labelBackgroundOutlineThickness?: number;
+    labelBackgroundVertexShaderSource: () => string;
+    labelBackgroundFragmentShaderSource: () => string;
+    labelTextVertexShaderSource: () => string;
+    labelTextFragmentShaderSource: () => string;
+}
+declare class LabeledIconPoints extends IconPoints {
+    private isWebGL2;
+    private labelShader;
+    private backgroundShader;
+    private fontTexture;
+    private fontAtlas;
+    private glyphQuad;
+    private labelInstanceData;
+    private backgroundBuffer;
+    private labelSettings;
+    private isInitialized;
+    private initPromise;
+    private totalGlyphs;
+    private textData;
+    private backgroundData;
+    private atlasSize;
+    private mapState;
+    private globalScaleFactor;
+    constructor(settings: ILabeledIconPointsSettings);
+    private initializeLabelRendering;
+    private loadFontAtlas;
+    private createShaders;
+    private createShaderProgram;
+    private createBuffers;
+    render(): this;
+    private setupStateBackground;
+    private setupStateText;
+    private setBackgroundUniforms;
+    private drawBackgrounds;
+    private setTextUniforms;
+    private drawText;
+    private updateLabelInstanceData;
+    drawOnCanvas(e: ICanvasOverlayDrawEvent): this;
+    private getLabelText;
+    private getLabelOffset;
+    private getLabelColor;
+    private getLabelBackgroundColor;
+    private getLabelBackgroundPadding;
+    setData(data: FeatureCollection<GeoPoint> | number[][]): this;
+    resetVertices(): this;
+    static tryClick(e: LeafletMouseEvent, map: Map, instances: LabeledIconPoints[]): boolean | undefined;
+    static tryHover(e: LeafletMouseEvent, map: Map, instances: LabeledIconPoints[]): Array<boolean | undefined>;
+}
+export { LabeledIconPoints, ILabeledIconPointsSettings };
