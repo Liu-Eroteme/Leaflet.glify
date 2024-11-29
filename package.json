@@ -21,8 +21,7 @@
     "lint:eslint": "eslint --fix --ext .js,.ts src",
     "lint:typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build",
-    "prepare": "npm run build",
-    "deploy": "npm run build && rimraf \"C:\\Users\\NSTRAR\\Projekte\\Collaborations\\Livemap_Frontend_React\\frontend_react\\node_modules\\leaflet.glify\\dist\" && copyfiles \"dist/**/*\" \"C:\\Users\\NSTRAR\\Projekte\\Collaborations\\Livemap_Frontend_React\\frontend_react\\node_modules\\leaflet.glify\""
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",
