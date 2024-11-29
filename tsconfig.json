@@ -19,5 +19,12 @@
     "typeRoots": ["./node_modules/@types", "./types"]
   },
   "include": ["src/**/*", "types/**/*"],
-  "exclude": ["node_modules", "**/*.json", "dist", "examples", "__coverage__"]
+  "exclude": [
+    "node_modules",
+    "**/*.json",
+    "dist",
+    "examples",
+    "__coverage__",
+    "src/_tests_"
+  ]
 }

@@ -46,13 +46,13 @@ const defaults: Partial<ILinesSettings> = {
       type: "FLOAT",
       start: 0,
       size: 2,
-      normalize: false
+      normalize: false,
     },
     color: {
       type: "FLOAT",
       start: 2,
       size: 4,
-      normalize: false
+      normalize: false,
     },
   },
 };

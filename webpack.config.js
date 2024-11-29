@@ -29,15 +29,16 @@ const web = {
       {
         test: /\.tsx?$/,
         use: "ts-loader",
-        exclude: /node_modules/,
+        exclude: [/node_modules/, /src\/_tests_/], // WARN: Temporarily excluding tests
       },
       {
         test: /\.(glsl|vs|fs|vert|frag)$/,
-        exclude: /node_modules/,
+        exclude: [/node_modules/, /src\/_tests_/], // WARN: Temporarily excluding tests
         use: ["ts-shader-loader"],
       },
       {
         test: /\.(png|jpg|gif)$/i,
+        exclude: [/src\/_tests_/], // WARN: Temporarily excluding tests
         use: [
           {
             loader: "url-loader",

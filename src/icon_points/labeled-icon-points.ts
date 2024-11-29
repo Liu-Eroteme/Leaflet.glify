@@ -9,7 +9,7 @@ import {
 } from "geojson";
 import { LeafletMouseEvent, Map, LatLng } from "leaflet";
 
-import fontAtlasJson from "../resources/helvetica-msdf/Helvetica-msdf.json";
+import fontAtlasJson from "./resources/helvetica-msdf/Helvetica-msdf.json";
 import fontAtlasImageSrc from "./resources/helvetica-msdf/Helvetica.png";
 
 // test

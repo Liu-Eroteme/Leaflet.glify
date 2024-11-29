@@ -1,7 +1,7 @@
 import { LatLng } from "leaflet";
 import { Position } from "geojson";
-import { IColor } from "./color";
-import { IPixel } from "./pixel";
+import { IColor } from "../util/color";
+import { IPixel } from "../util/pixel";
 
 interface ILineFeatureVerticesSettings {
   project: (coordinates: LatLng, distance: number) => IPixel;
