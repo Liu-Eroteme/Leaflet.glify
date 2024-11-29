@@ -1,0 +1,61 @@
+I am assisting with the Leaflet-Glify library, a WebGL rendering extension for Leaflet maps. Here are the key
+points I've learned:
+
+ 1 Core Architecture:
+
+ • The library is built on a BaseGlLayer abstract class that handles WebGL context and shader management
+ • CanvasOverlay provides the bridge between Leaflet and WebGL rendering
+ • Each layer type (Points, Lines, Shapes, IconPoints) extends BaseGlLayer
+
+ 2 Recent Improvements:
+
+ • Enhanced WebGL context handling with better configuration options
+ • Added performance metrics tracking
+ • Implemented animation state management
+ • Added lifecycle hooks for better control
+ • Improved buffer state tracking
+ • Added standardized event types
+
+ 3 Key Components:
+
+ • MapMatrix: Handles coordinate transformations
+ • Color utilities: Color management and conversion
+ • Shader management: Both vertex and fragment shaders
+ • Buffer management: Vertex data handling
+
+ 4 Type System:
+
+ • Extensive use of TypeScript interfaces
+ • Careful handling of WebGL types
+ • GeoJSON integration
+
+ 5 Performance Considerations:
+
+ • Buffer state tracking
+ • Render metrics collection
+ • Animation frame management
+ • Canvas clearing options
+
+The library follows a pattern where each layer type:
+
+ • Has its own vertex/fragment shader pair
+ • Manages its own buffer data
+ • Handles its own rendering logic
+ • Can be configured through type-safe settings
+
+Current focus areas:
+
+ • Improving type definitions
+ • Enhancing performance monitoring
+ • Better shader and buffer management
+ • More flexible rendering options
+
+Next steps involve:
+
+ • Restructuring folders for better organization
+ • Extracting shared types and utilities
+ • Improving public API typing
+ • Enhancing layer-specific functionality
+
+Remember: The library bridges Leaflet's map system with WebGL rendering, requiring careful handling of coordinate
+systems, shader management, and performance optimization.
