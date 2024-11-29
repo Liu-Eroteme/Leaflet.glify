@@ -220,13 +220,53 @@ declare module "leaflet" {
     }
 
     function lines(options: LinesOptions): LinesInstance;
-    function shapes(options: any): any;
+
+    // Shape-specific interfaces
+    interface IShapesSettings extends IGlifyLayerOptions {
+      data: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | 
+            GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon> | 
+            GeoJSON.MultiPolygon | 
+            number[][];
+      border?: boolean;
+      borderOpacity?: number;
+      setupClick?: (map: L.Map) => void;
+      setupHover?: SetupHoverCallback;
+      sensitivity?: number;
+      sensitivityHover?: number;
+      click?: EventCallback;
+      hover?: EventCallback;
+      hoverOff?: EventCallback;
+      hoverWait?: number;
+    }
+
+    interface ShapesInstance extends IGlifyLayer {
+      active: boolean;
+      vertices: number[];
+      vertexLines: number[]; // For border rendering
+      canvas: HTMLCanvasElement;
+      gl: WebGLRenderingContext | WebGL2RenderingContext;
+      
+      // Core methods
+      resetVertices(): this;
+      drawOnCanvas(e: ICanvasOverlayDrawEvent): this;
+      
+      // WebGL helpers
+      getBuffer(name: string): WebGLBuffer;
+      getAttributeLocation(name: string): number;
+      getUniformLocation(name: string): WebGLUniformLocation;
+
+      // Shape-specific properties
+      readonly border: boolean;
+      readonly borderOpacity: number;
+    }
+
+    function shapes(options: IShapesSettings): ShapesInstance;
 
     const pointsInstances: PointsInstance[];
     const iconPointsInstances: IconPointsInstance[];
     const labeledIconPointsInstances: LabeledIconPointsInstance[];
     const linesInstances: LinesInstance[];
-    const shapesInstances: any[];
+    const shapesInstances: ShapesInstance[];
   }
 
   interface Map {
