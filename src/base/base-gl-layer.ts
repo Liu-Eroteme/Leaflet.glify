@@ -86,7 +86,7 @@ export interface IGlShaderConfig {
 }
 
 export interface IBaseGlLayerSettings {
-  data: GeoJSON.FeatureCollection | number[][];
+  data: GeoJSON.FeatureCollection | GeoJSON.Feature | GeoJSON.Geometry | number[][];
   longitudeKey: number;
   latitudeKey: number;
   pane: string;

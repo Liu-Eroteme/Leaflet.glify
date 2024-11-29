@@ -26,7 +26,7 @@ import glify from "../index";
 export interface IShapesSettings extends IBaseGlLayerSettings {
   border?: boolean;
   borderOpacity?: number;
-  data: Feature | FeatureCollection | MultiPolygon | number[][];
+  data: Feature<Polygon | MultiPolygon> | FeatureCollection<Polygon | MultiPolygon> | MultiPolygon | number[][];
   setupClick?: (map: Map) => void;
   setupHover?: (map: Map, hoverWait?: number, immediate?: false) => void;
 }
@@ -160,7 +160,7 @@ export class Shapes extends BaseGlLayer {
       case "Feature":
         polygonLookup.loadFeatureCollection({
           type: "FeatureCollection",
-          features: [data],
+          features: [data as Feature<Polygon | MultiPolygon>],
         });
         features = geojsonFlatten(data);
         break;
