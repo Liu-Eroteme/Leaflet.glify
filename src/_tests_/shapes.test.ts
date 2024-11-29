@@ -5,7 +5,7 @@ import PolygonLookup from "polygon-lookup";
 import earcut from "earcut";
 
 import { IShapesSettings, Shapes } from "../shapes";
-import { notProperlyDefined } from "../errors";
+import { notProperlyDefined } from "../util/errors";
 
 jest.mock("../canvas-overlay");
 jest.mock("geojson-flatten", () => {

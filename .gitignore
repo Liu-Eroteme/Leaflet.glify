@@ -11,3 +11,4 @@ __coverage__
 .gh-pages
 .aider*
 .env
+aider.state

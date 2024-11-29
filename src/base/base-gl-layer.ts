@@ -25,11 +25,11 @@ export interface IBufferState {
 
 import { LeafletMouseEvent, Map, LatLng, Layer } from "leaflet";
 
-import { IColor } from "./color";
-import { IPixel } from "./pixel";
+import { IColor } from "../util/color";
+import { IPixel } from "../util/pixel";
 import { CanvasOverlay, ICanvasOverlayDrawEvent } from "./canvas-overlay";
-import { notProperlyDefined } from "./errors";
-import { MapMatrix } from "./map-matrix";
+import { notProperlyDefined } from "../util/errors";
+import { MapMatrix } from "../util/map-matrix";
 
 import { Point } from "leaflet";
 

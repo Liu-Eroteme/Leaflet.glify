@@ -1,5 +1,5 @@
 import { IconPoints, IIconPointsSettings, IIconVertex } from "./icon-points";
-import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
+import { ICanvasOverlayDrawEvent } from "../base/canvas-overlay";
 import {
   Feature,
   FeatureCollection,
@@ -9,7 +9,7 @@ import {
 } from "geojson";
 import { LeafletMouseEvent, Map, LatLng } from "leaflet";
 
-import fontAtlasJson from "./resources/helvetica-msdf/Helvetica-msdf.json";
+import fontAtlasJson from "../resources/helvetica-msdf/Helvetica-msdf.json";
 import fontAtlasImageSrc from "./resources/helvetica-msdf/Helvetica.png";
 
 // test

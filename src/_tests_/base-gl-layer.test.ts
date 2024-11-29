@@ -4,8 +4,8 @@ import {
   defaultPane,
   EventCallback,
   IBaseGlLayerSettings,
-} from "../base-gl-layer";
-import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
+} from "../base/base-gl-layer";
+import { ICanvasOverlayDrawEvent } from "../base/canvas-overlay";
 import { LatLng, LatLngBounds, LeafletMouseEvent, Map, Point } from "leaflet";
 
 jest.mock("../canvas-overlay");

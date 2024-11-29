@@ -1,7 +1,7 @@
 import { LatLng, LatLngBounds, Map, Point } from "leaflet";
 import { FeatureCollection, Point as GeoPoint } from "geojson";
-import { IPointVertex, IPointsSettings, Points } from "../points";
-import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
+import { IPointVertex, IPointsSettings, Points } from "../points/points";
+import { ICanvasOverlayDrawEvent } from "../base/canvas-overlay";
 
 jest.mock("../canvas-overlay");
 

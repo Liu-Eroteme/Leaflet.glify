@@ -15,8 +15,8 @@ import {
   BaseGlLayer,
   ColorCallback,
   IBaseGlLayerSettings,
-} from "./base-gl-layer";
-import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
+} from "./base/base-gl-layer";
+import { ICanvasOverlayDrawEvent } from "./base/canvas-overlay";
 import * as Color from "./color";
 import { latLonToPixel } from "./utils";
 

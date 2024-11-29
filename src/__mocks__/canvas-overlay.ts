@@ -1,4 +1,4 @@
-import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
+import { ICanvasOverlayDrawEvent } from "../base/canvas-overlay";
 import { Map } from "leaflet";
 
 export class CanvasOverlay {

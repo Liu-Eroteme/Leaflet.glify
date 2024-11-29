@@ -1,8 +1,8 @@
 import { LatLng, LatLngBounds, LeafletMouseEvent, Map, Point } from "leaflet";
 import { Feature, FeatureCollection, LineString } from "geojson";
-import { MapMatrix } from "../map-matrix";
-import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
-import { ILinesSettings, Lines, WeightCallback } from "../lines";
+import { MapMatrix } from "../util/map-matrix";
+import { ICanvasOverlayDrawEvent } from "../base/canvas-overlay";
+import { ILinesSettings, Lines, WeightCallback } from "../lines/lines";
 
 jest.mock("../canvas-overlay");
 jest.mock("../utils", () => {

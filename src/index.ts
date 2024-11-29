@@ -8,7 +8,7 @@ import { IconPoints, IIconPointsSettings } from "./icon-points";
 import {
   LabeledIconPoints,
   ILabeledIconPointsSettings,
-} from "./labeled-icon-points";
+} from "./icon_points/labeled-icon-points";
 import { debounce } from "./utils";
 
 import defaultShader from "./shader/vertex/default.glsl";

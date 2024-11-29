@@ -11,8 +11,8 @@ import {
   BaseGlLayer,
   ColorCallback,
   IBaseGlLayerSettings,
-} from "./base-gl-layer";
-import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
+} from "./base/base-gl-layer";
+import { ICanvasOverlayDrawEvent } from "./base/canvas-overlay";
 import * as color from "./color";
 import { LineFeatureVertices } from "./line-feature-vertices";
 import { latLngDistance, inBounds } from "./utils";

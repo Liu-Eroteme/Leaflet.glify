@@ -7,8 +7,8 @@ import {
   Position,
 } from "geojson";
 
-import { BaseGlLayer, IBaseGlLayerSettings } from "./base-gl-layer";
-import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
+import { BaseGlLayer, IBaseGlLayerSettings } from "./base/base-gl-layer";
+import { ICanvasOverlayDrawEvent } from "./base/canvas-overlay";
 import * as Color from "./color";
 import { LeafletMouseEvent, Map, Point, LatLng } from "leaflet";
 import { IPixel } from "./pixel";
