@@ -278,7 +278,6 @@ export abstract class BaseGlLayer<
     return this.settings.color ?? null;
   }
 
-
   constructor(settings: Partial<IBaseGlLayerSettings>) {
     console.log("BaseGlLayer constructor - Starting initialization");
     this.settings = { ...defaults, ...settings };
@@ -341,9 +340,9 @@ export abstract class BaseGlLayer<
     }
 
     // Force canvas to be visible and properly sized
-    this.canvas.style.display = 'block';
-    this.canvas.style.visibility = 'visible';
-    
+    this.canvas.style.display = "block";
+    this.canvas.style.visibility = "visible";
+
     // Ensure canvas dimensions are non-zero
     if (this.canvas.width === 0 || this.canvas.height === 0) {
       console.warn("Canvas has zero dimensions, setting defaults");
@@ -359,38 +358,30 @@ export abstract class BaseGlLayer<
       stencil: false, // No stencil needed
       preserveDrawingBuffer: Boolean(this.settings.preserveDrawingBuffer),
       failIfMajorPerformanceCaveat: false,
-      powerPreference: "default" // Let browser decide
+      powerPreference: "default", // Let browser decide
     };
 
     try {
       // Try getting WebGL2 context first
-      let gl = this.canvas.getContext('webgl2', contextAttributes) as WebGL2RenderingContext | null;
-      
+      let gl = this.canvas.getContext("webgl2", contextAttributes);
       if (gl) {
         this.gl = gl;
         return;
       }
 
       // Fallback to WebGL1
-      gl = this.canvas.getContext('webgl', contextAttributes) as WebGLRenderingContext | null;
-      
-      if (gl) {
-        this.gl = gl;
-        return;
-      }
-
-      // Last resort - try experimental-webgl
-      gl = this.canvas.getContext('experimental-webgl', contextAttributes) as WebGLRenderingContext | null;
-      
-      if (gl) {
-        this.gl = gl;
+      let gl1 = this.canvas.getContext("webgl", contextAttributes);
+      if (gl1) {
+        this.gl = gl1;
         return;
       }
 
       // If we get here, no WebGL context could be created
-      const error = new Error("WebGL not supported - no context could be created");
+      const error = new Error(
+        "WebGL not supported - no context could be created"
+      );
       console.error(error);
-      
+
       // Log critical diagnostic info
       console.error("WebGL Context Creation Failed:", {
         canvas: {
@@ -399,18 +390,20 @@ export abstract class BaseGlLayer<
           clientWidth: this.canvas.clientWidth,
           clientHeight: this.canvas.clientHeight,
           style: this.canvas.style.cssText,
-          inDocument: document.contains(this.canvas)
+          inDocument: document.contains(this.canvas),
         },
         contextAttributes,
         webglSupport: {
-          webgl2: 'WebGL2RenderingContext' in window,
-          webgl: 'WebGLRenderingContext' in window
-        }
+          webgl2: "WebGL2RenderingContext" in window,
+          webgl: "WebGLRenderingContext" in window,
+        },
       });
-      
+
       throw error;
     } catch (err) {
-      const error = new Error(`WebGL initialization failed: ${err instanceof Error ? err.message : String(err)}`);
+      const error = new Error(
+        `WebGL initialization failed: ${err instanceof Error ? err.message : String(err)}`
+      );
       console.error(error);
       throw error;
     }
