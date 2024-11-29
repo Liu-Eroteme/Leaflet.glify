@@ -54,7 +54,10 @@ declare module "leaflet" {
     }
 
     // NOTE: Event handling types
-    type EventCallback = (e: L.LeafletMouseEvent, feature: any) => boolean | void;
+    type EventCallback = (
+      e: L.LeafletMouseEvent, 
+      feature: GeoJSON.Feature<GeoJSON.Point> | [number, number]
+    ) => boolean | void;
     type SetupHoverCallback = (map: L.Map, hoverWait?: number, immediate?: false) => void;
 
     // NOTE: Canvas overlay drawing event interface
@@ -81,6 +84,16 @@ declare module "leaflet" {
       hoverWait?: number;
     }
 
+    // NOTE: Interface for vertex data in IconPoints
+    interface IIconVertex {
+      latLng: L.LatLng;
+      pixel: L.Point;
+      chosenColor: IColor;
+      chosenSize: number;
+      key: string;
+      feature?: GeoJSON.Feature | number[];
+    }
+
     interface IconPointsOptions extends IGlifyLayerOptions {
       iconUrl: string;
       iconSize: number;
@@ -93,6 +106,9 @@ declare module "leaflet" {
       setupClick?: (map: L.Map) => void;
       setupHover?: SetupHoverCallback;
       hoverWait?: number;
+      incrementZ?: number;
+      eachVertex?: (vertex: IIconVertex) => void;
+      data: GeoJSON.FeatureCollection<GeoJSON.Point> | [number, number][];
     }
 
     interface LabeledIconPointsOptions extends IconPointsOptions {
@@ -122,7 +138,24 @@ declare module "leaflet" {
     }
 
     interface PointsInstance extends IGlifyLayer {}
-    interface IconPointsInstance extends IGlifyLayer {}
+    interface IconPointsInstance extends IGlifyLayer {
+      active: boolean;
+      texture: WebGLTexture | null;
+      vertices: Float32Array;
+      canvas: HTMLCanvasElement;
+      gl: WebGLRenderingContext | WebGL2RenderingContext;
+      
+      setupState(): this;
+      drawOnCanvas(e: ICanvasOverlayDrawEvent): this;
+      lookup(coords: L.LatLng): IIconVertex | null;
+      resetVertices(): this;
+      ready(): Promise<void>;
+      
+      // WebGL related methods
+      getBuffer(name: string): WebGLBuffer;
+      getAttributeLocation(name: string): number;
+      getUniformLocation(name: string): WebGLUniformLocation;
+    }
 
     interface LabeledIconPointsInstance extends IGlifyLayer {
       resetVertices(): this;
