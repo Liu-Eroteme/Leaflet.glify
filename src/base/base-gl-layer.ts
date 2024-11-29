@@ -278,6 +278,9 @@ export abstract class BaseGlLayer<
     return this.settings.color ?? null;
   }
 
+  canvas!: HTMLCanvasElement; // Definite assignment assertion
+  gl!: WebGLRenderingContext | WebGL2RenderingContext; // Definite assignment assertion
+
   constructor(settings: Partial<IBaseGlLayerSettings>) {
     console.log("BaseGlLayer constructor - Starting initialization");
     this.settings = { ...defaults, ...settings };
@@ -316,33 +319,25 @@ export abstract class BaseGlLayer<
     layer.eventEmitter.on("dragstart", this.startDragCaching.bind(this));
     layer.eventEmitter.on("dragend", this.stopDragCaching.bind(this));
 
-    // Wait for next frame to ensure canvas is in DOM
-    requestAnimationFrame(() => {
-      if (!layer.canvas) {
-        console.error("Canvas creation failed in layer");
-        throw new Error("Canvas creation failed");
-      }
+    // Initialize canvas and WebGL context
+    if (!layer.canvas) {
+      console.error("Canvas creation failed in layer");
+      throw new Error("Canvas creation failed");
+    }
 
-      const canvas = (this.canvas = layer.canvas);
+    this.canvas = layer.canvas;
+    this.canvas.width = this.canvas.clientWidth || 300;
+    this.canvas.height = this.canvas.clientHeight || 150;
+    this.canvas.style.position = "absolute";
+    if (this.className) {
+      this.canvas.className += " " + this.className;
+    }
 
-      // Setup canvas properties
-      canvas.width = canvas.clientWidth || 300; // Fallback width
-      canvas.height = canvas.clientHeight || 150; // Fallback height
-      canvas.style.position = "absolute";
-      if (this.className) {
-        canvas.className += " " + this.className;
-      }
-
-      // Now initialize WebGL context
-      this.initializeWebGLContext();
-    });
+    // Initialize WebGL context
+    this.initializeWebGLContext();
   }
 
   private initializeWebGLContext() {
-    if (!this.canvas) {
-      throw new Error("Canvas not available for WebGL initialization");
-    }
-
     // Log canvas diagnostics
     console.log("Canvas setup details:", {
       width: this.canvas.width,
@@ -358,7 +353,7 @@ export abstract class BaseGlLayer<
     // Initialize WebGL with detailed error checking
     console.log("BaseGlLayer - Starting GL context initialization");
 
-    const contextAttributes = {
+    const contextAttributes: WebGLContextAttributes = {
       preserveDrawingBuffer: Boolean(this.settings.preserveDrawingBuffer),
       antialias: true,
       alpha: true,
@@ -367,6 +362,11 @@ export abstract class BaseGlLayer<
       failIfMajorPerformanceCaveat: false,
       powerPreference: "high-performance",
     };
+
+    // Check hardware acceleration without using non-standard properties
+    const testCanvas = document.createElement('canvas');
+    const testContext = testCanvas.getContext('2d');
+    const isHardwareAccelerated = testContext !== null;
 
     try {
       // Add diagnostic checks before context creation

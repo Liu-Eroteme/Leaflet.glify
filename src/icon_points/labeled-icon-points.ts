@@ -113,37 +113,34 @@ class LabeledIconPoints extends IconPoints {
   constructor(settings: ILabeledIconPointsSettings) {
     super(settings);
     
-    // Wait for base class initialization
-    requestAnimationFrame(() => {
-      if (!this.gl) {
-        console.error('WebGL context not initialized in LabeledIconPoints constructor');
-        throw new Error('WebGL context not initialized');
-      }
-      
-      this.labelSettings = {
-        labelOffset: [25, -40],
-        labelFont: "Helvetica",
-        labelColor: { r: 0, g: 0, b: 0, a: 1 },
-        labelBackgroundColor: { r: 255, g: 255, b: 255, a: 1 },
-        labelText: () => "",
-        labelBackgroundPadding: [10, 10],
-        labelBackgroundCornerRadius: 20,
-        labelBackgroundOutlineThickness: 16,
-        globalScaleFactor: 0.6,
-        labelTextSmoothing: 0.3,
-        ...settings,
-      };
+    if (!this.gl) {
+      console.error('WebGL context not initialized in LabeledIconPoints constructor');
+      throw new Error('WebGL context not initialized');
+    }
+    
+    this.labelSettings = {
+      labelOffset: [25, -40],
+      labelFont: "Helvetica",
+      labelColor: { r: 0, g: 0, b: 0, a: 1 },
+      labelBackgroundColor: { r: 255, g: 255, b: 255, a: 1 },
+      labelText: () => "",
+      labelBackgroundPadding: [10, 10],
+      labelBackgroundCornerRadius: 20,
+      labelBackgroundOutlineThickness: 16,
+      globalScaleFactor: 0.6,
+      labelTextSmoothing: 0.3,
+      ...settings,
+    };
 
-      // Check for WebGL2 support
-      this.isWebGL2 = this.gl instanceof WebGL2RenderingContext;
-      console.log("LabeledIconPoints - WebGL2 support:", this.isWebGL2);
+    // Check for WebGL2 support
+    this.isWebGL2 = this.gl instanceof WebGL2RenderingContext;
+    console.log("LabeledIconPoints - WebGL2 support:", this.isWebGL2);
 
-      this.globalScaleFactor = this.labelSettings.globalScaleFactor ?? 0.5;
-      this.totalGlyphs = 0;
+    this.globalScaleFactor = this.labelSettings.globalScaleFactor ?? 0.5;
+    this.totalGlyphs = 0;
 
-      // Initialize rendering after context is ready
-      this.initPromise = this.initializeLabelRendering();
-    });
+    // Initialize rendering
+    this.initPromise = this.initializeLabelRendering();
   }
 
   private async initializeLabelRendering(): Promise<void> {
