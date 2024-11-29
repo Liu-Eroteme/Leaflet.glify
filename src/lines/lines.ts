@@ -301,9 +301,9 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     } else if (typeof weight === "function") {
       let allVertexCount = 0;
       const { features } = data;
-      for (let i = 0; i < vertices.length; i++) {
-        const featureVertices = vertices[i];
-        const { vertexCount } = featureVertices;
+      for (let i = 0; i < this.lineFeatures.length; i++) {
+        const featureVertices = this.lineFeatures[i];
+        const vertexCount = featureVertices.array.length / this.bytes;
         const weightValue = weight(i, features[i]);
         // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
         for (
