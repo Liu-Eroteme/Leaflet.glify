@@ -296,16 +296,17 @@ export abstract class BaseGlLayer<
       this.mapCenterPixels = { x: -0, y: -0 };
     }
 
-    const preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
-
-    // Create and setup canvas overlay
+    // Create and setup canvas overlay first
     const layer = (this.layer = new CanvasOverlay(
       (context: ICanvasOverlayDrawEvent) => {
         this._context = context;
         return this.drawOnCanvas(context);
       },
       this.pane
-    ).addTo(this.map));
+    ));
+
+    // Add to map
+    layer.addTo(this.map);
 
     // Setup event listeners
     layer.eventEmitter.on("movestart", this.startDragCaching.bind(this));
@@ -315,38 +316,50 @@ export abstract class BaseGlLayer<
     layer.eventEmitter.on("dragstart", this.startDragCaching.bind(this));
     layer.eventEmitter.on("dragend", this.stopDragCaching.bind(this));
 
-    if (!layer.canvas) {
-      console.error("Canvas creation failed in layer");
-      throw new Error("Canvas creation failed");
-    }
+    // Wait for next frame to ensure canvas is in DOM
+    requestAnimationFrame(() => {
+      if (!layer.canvas) {
+        console.error("Canvas creation failed in layer");
+        throw new Error("Canvas creation failed");
+      }
 
-    const canvas = (this.canvas = layer.canvas);
+      const canvas = (this.canvas = layer.canvas);
 
-    // Setup canvas properties
-    canvas.width = canvas.clientWidth || 300; // Fallback width
-    canvas.height = canvas.clientHeight || 150; // Fallback height
-    canvas.style.position = "absolute";
-    if (this.className) {
-      canvas.className += " " + this.className;
+      // Setup canvas properties
+      canvas.width = canvas.clientWidth || 300; // Fallback width
+      canvas.height = canvas.clientHeight || 150; // Fallback height
+      canvas.style.position = "absolute";
+      if (this.className) {
+        canvas.className += " " + this.className;
+      }
+
+      // Now initialize WebGL context
+      this.initializeWebGLContext();
+    });
+  }
+
+  private initializeWebGLContext() {
+    if (!this.canvas) {
+      throw new Error("Canvas not available for WebGL initialization");
     }
 
     // Log canvas diagnostics
     console.log("Canvas setup details:", {
-      width: canvas.width,
-      height: canvas.height,
-      style: canvas.style.cssText,
-      offsetWidth: canvas.offsetWidth,
-      offsetHeight: canvas.offsetHeight,
-      clientWidth: canvas.clientWidth,
-      clientHeight: canvas.clientHeight,
-      inDocument: document.contains(canvas),
+      width: this.canvas.width,
+      height: this.canvas.height,
+      style: this.canvas.style.cssText,
+      offsetWidth: this.canvas.offsetWidth,
+      offsetHeight: this.canvas.offsetHeight,
+      clientWidth: this.canvas.clientWidth,
+      clientHeight: this.canvas.clientHeight,
+      inDocument: document.contains(this.canvas),
     });
 
     // Initialize WebGL with detailed error checking
-    console.log("BaseGlLayer constructor - Starting GL context initialization");
+    console.log("BaseGlLayer - Starting GL context initialization");
 
     const contextAttributes = {
-      preserveDrawingBuffer,
+      preserveDrawingBuffer: Boolean(this.settings.preserveDrawingBuffer),
       antialias: true,
       alpha: true,
       depth: true,
@@ -364,32 +377,39 @@ export abstract class BaseGlLayer<
         dimensions: `${canvas.width}x${canvas.height}`,
         offsetParent: canvas.offsetParent,
         documentBody: document.body !== null,
-        inDocument: document.contains(canvas)
+        inDocument: document.contains(canvas),
       });
 
       // Check for hardware acceleration
-      const canvas2d = document.createElement('canvas');
-      const ctx2d = canvas2d.getContext('2d');
-      const webglTestCanvas = document.createElement('canvas');
-      const testGL = webglTestCanvas.getContext('webgl');
-      
+      const canvas2d = document.createElement("canvas");
+      const ctx2d = canvas2d.getContext("2d");
+      const webglTestCanvas = document.createElement("canvas");
+      const testGL = webglTestCanvas.getContext("webgl");
+
       console.log("WebGL environment diagnostics:", {
         // @ts-ignore
-        isHardwareAccelerated: ctx2d?.webkitBackingStorePixelRatio !== undefined,
+        isHardwareAccelerated:
+          ctx2d?.webkitBackingStorePixelRatio !== undefined,
         testContextCreation: !!testGL,
         testContextAttributes: testGL?.getContextAttributes(),
         // @ts-ignore
         gpuInfo: window.chrome?.gpuInfo?.getInfo?.(),
         webglContexts: {
-          webgl2: !!webglTestCanvas.getContext('webgl2'),
-          webgl: !!webglTestCanvas.getContext('webgl'),
-          experimental: !!webglTestCanvas.getContext('experimental-webgl')
-        }
+          webgl2: !!webglTestCanvas.getContext("webgl2"),
+          webgl: !!webglTestCanvas.getContext("webgl"),
+          experimental: !!webglTestCanvas.getContext("experimental-webgl"),
+        },
       });
 
       // Try WebGL2 first
-      console.log("Attempting WebGL2 context creation with attributes:", contextAttributes);
-      const gl2 = canvas.getContext("webgl2", contextAttributes) as WebGL2RenderingContext | null;
+      console.log(
+        "Attempting WebGL2 context creation with attributes:",
+        contextAttributes
+      );
+      const gl2 = canvas.getContext(
+        "webgl2",
+        contextAttributes
+      ) as WebGL2RenderingContext | null;
 
       if (gl2) {
         console.log("WebGL2 context created successfully");
@@ -400,7 +420,10 @@ export abstract class BaseGlLayer<
 
       // Try WebGL1
       console.log("WebGL2 failed, attempting WebGL1");
-      const gl1 = canvas.getContext("webgl", contextAttributes) as WebGLRenderingContext | null;
+      const gl1 = canvas.getContext(
+        "webgl",
+        contextAttributes
+      ) as WebGLRenderingContext | null;
 
       if (gl1) {
         console.log("WebGL1 context created successfully");
@@ -411,7 +434,10 @@ export abstract class BaseGlLayer<
 
       // Try experimental-webgl
       console.log("WebGL1 failed, attempting experimental-webgl");
-      const glExp = canvas.getContext("experimental-webgl", contextAttributes) as WebGLRenderingContext | null;
+      const glExp = canvas.getContext(
+        "experimental-webgl",
+        contextAttributes
+      ) as WebGLRenderingContext | null;
 
       if (glExp) {
         console.log("Experimental WebGL context created successfully");
@@ -429,18 +455,18 @@ export abstract class BaseGlLayer<
           isConnected: canvas.isConnected,
           inDocument: document.contains(canvas),
           visibility: canvas.style.visibility,
-          display: canvas.style.display
+          display: canvas.style.display,
         },
         contextAttempts: {
           webgl2: !!canvas.getContext("webgl2"),
           webgl: !!canvas.getContext("webgl"),
-          experimental: !!canvas.getContext("experimental-webgl")
+          experimental: !!canvas.getContext("experimental-webgl"),
         },
         contextAttributes,
         // @ts-ignore
         gpuInfo: window.chrome?.gpuInfo?.getInfo?.(),
         userAgent: navigator.userAgent,
-        vendor: navigator.vendor
+        vendor: navigator.vendor,
       });
 
       throw new Error("Could not create any WebGL context");
