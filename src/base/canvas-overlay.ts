@@ -157,6 +157,7 @@ export class CanvasOverlay extends Layer {
   };
 
   constructor(userDrawFunc: IUserDrawFunc, pane: string) {
+    console.log('CanvasOverlay constructor - Starting initialization');
     super();
     this.eventEmitter = new EventEmitter();
     this._userDrawFunc = userDrawFunc;
@@ -164,6 +165,7 @@ export class CanvasOverlay extends Layer {
     this._redrawCallbacks = [];
     this._pane = pane;
     this.options = {};
+    console.log('CanvasOverlay constructor - Initialization complete');
   }
 
   drawing(userDrawFunc: IUserDrawFunc): this {
@@ -191,15 +193,23 @@ export class CanvasOverlay extends Layer {
   }
 
   onAdd(map: Map): this {
+    console.log('CanvasOverlay onAdd - Starting');
     this._map = map;
+    console.log('CanvasOverlay onAdd - Map assigned');
+    
     const canvas = (this.canvas =
       this.canvas ?? document.createElement("canvas"));
+    console.log('CanvasOverlay onAdd - Canvas created/assigned');
 
     const size = map.getSize();
+    console.log('CanvasOverlay onAdd - Map size:', size);
     const animated = this.isAnimated();
+    console.log('CanvasOverlay onAdd - Animation status:', animated);
+    
     canvas.width = size.x;
     canvas.height = size.y;
     canvas.className = `leaflet-zoom-${animated ? "animated" : "hide"}`;
+    console.log('CanvasOverlay onAdd - Canvas configured');
 
     const pane = map.getPane(this._pane);
     if (!pane) {

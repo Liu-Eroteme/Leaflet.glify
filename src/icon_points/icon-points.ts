@@ -118,12 +118,16 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
   }
 
   constructor(settings: Partial<IIconPointsSettings>) {
+    console.log('IconPoints constructor - Starting initialization');
     super(settings);
+    console.log('IconPoints constructor - After super() call');
     console.log('IconPoints constructor - GL context:', this.gl ? 'initialized' : 'null');
 
     this.settings = { ...defaults, ...settings };
+    console.log('IconPoints constructor - Settings initialized');
 
     if (!this.gl) {
+      console.error('IconPoints constructor - WebGL context is null');
       throw new Error('WebGL context not initialized in IconPoints constructor');
     }
 

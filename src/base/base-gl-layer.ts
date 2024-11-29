@@ -272,7 +272,10 @@ export abstract class BaseGlLayer<
   }
 
   constructor(settings: Partial<IBaseGlLayerSettings>) {
+    console.log('BaseGlLayer constructor - Starting initialization');
     this.settings = { ...defaults, ...settings };
+    console.log('BaseGlLayer constructor - Settings initialized');
+    
     this.mapMatrix = new MapMatrix();
     this.active = true;
     this.vertexShader = null;
@@ -282,6 +285,7 @@ export abstract class BaseGlLayer<
 
     // Initialize WebGL context with configured options
     if (settings.contextOptions) {
+      console.log('BaseGlLayer constructor - Using custom context options');
       this.gl = this.initWebGLContext(settings.contextOptions);
     }
     try {
@@ -317,22 +321,37 @@ export abstract class BaseGlLayer<
       canvas.className += " " + this.className;
     }
     console.log('BaseGlLayer constructor - Starting GL context initialization');
+    console.log('BaseGlLayer constructor - Canvas element:', canvas ? 'exists' : 'null');
     
     const gl = canvas.getContext("webgl2", {
       preserveDrawingBuffer,
       antialias: true,
-    }) ??
-      canvas.getContext("webgl", { preserveDrawingBuffer }) ??
-      canvas.getContext("experimental-webgl", {
-        preserveDrawingBuffer,
-      });
-
+    });
+    console.log('BaseGlLayer constructor - WebGL2 context:', gl ? 'obtained' : 'failed');
+    
     if (!gl) {
-      throw new Error('Failed to initialize WebGL context');
+      const gl1 = canvas.getContext("webgl", { preserveDrawingBuffer });
+      console.log('BaseGlLayer constructor - WebGL1 context:', gl1 ? 'obtained' : 'failed');
+      
+      if (!gl1) {
+        const glExperimental = canvas.getContext("experimental-webgl", {
+          preserveDrawingBuffer,
+        });
+        console.log('BaseGlLayer constructor - Experimental WebGL context:', glExperimental ? 'obtained' : 'failed');
+        
+        if (!glExperimental) {
+          console.error('BaseGlLayer constructor - All WebGL context creation attempts failed');
+          throw new Error('Failed to initialize WebGL context');
+        }
+        this.gl = glExperimental as WebGLRenderingContext;
+      } else {
+        this.gl = gl1 as WebGLRenderingContext;
+      }
+    } else {
+      this.gl = gl as WebGLRenderingContext;
     }
-
-    this.gl = gl as WebGLRenderingContext;
-    console.log('BaseGlLayer constructor - GL context:', this.gl ? 'initialized' : 'null');
+    
+    console.log('BaseGlLayer constructor - Final GL context:', this.gl ? 'initialized' : 'null');
   }
 
   protected initWebGLContext(options: IWebGLContextOptions): WebGLRenderingContext | WebGL2RenderingContext {
