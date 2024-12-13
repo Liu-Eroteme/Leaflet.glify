@@ -1311,6 +1311,9 @@ class LabeledIconPoints extends IconPoints {
           // Fire a custom event with the feature data
           // Ensure 'click' is a known event handler in the instance
           const result = instance.click(e, f);
+          const test = result !== undefined ? result : true;
+          console.log(test);
+          console.log(f);
           return result !== undefined ? result : true;
         }
       }
