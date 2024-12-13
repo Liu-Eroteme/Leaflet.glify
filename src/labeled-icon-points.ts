@@ -1260,78 +1260,56 @@ class LabeledIconPoints extends IconPoints {
 
         const pixelOffset = instance.getLabelOffset(f);
         const padding = instance.getLabelBackgroundPadding(f);
-        const labelColor = instance.getLabelColor(f);
 
         // Compute text bounding box
         let xOffset = padding[0] * gsf;
         let maxWidth = 0;
         let maxHeight = 0;
-        let maxYOffset = 0;
-        let minYOffset = 0;
         let prevChar: number | null = null;
 
         const chars: any[] = instance.fontAtlas.chars;
         const kernings: any[] = instance.fontAtlas.kernings;
-
-        let firstXOffset = 0;
-        let lastXOffset = 0;
 
         for (let cIndex = 0; cIndex < text.length; cIndex++) {
           const char = text[cIndex];
           const charInfo = chars.find((c: any) => c.char === char);
           if (!charInfo) continue;
 
-          if (cIndex === 0) firstXOffset = charInfo.xoffset;
-          if (cIndex === text.length - 1) lastXOffset = charInfo.xoffset;
-
           if (prevChar) {
             const k = kernings.find(
               (k: any) => k.first === prevChar && k.second === charInfo.id
             );
-            if (k) xOffset += k.amount;
+            if (k) xOffset += k.amount * gsf;
           }
 
-          // Apply gsf scaling to the glyph metrics
-          const charWidth = charInfo.width * gsf;
-          const charHeight = charInfo.height * gsf;
-          const yoffset = charInfo.yoffset;
-          // yoffset, xoffset are font metrics; consider if these need scaling
-          // Typically xoffset/yoffset also scale with gsf:
-          // But usually xoffset/yoffset are also in font units. Let's scale them too:
-          const cyoffset = yoffset * gsf;
-          const cxoffset = charInfo.xoffset * gsf;
           const cxadvance = charInfo.xadvance * gsf;
+          const charHeight = charInfo.height * gsf;
 
           xOffset += cxadvance;
           maxWidth = Math.max(maxWidth, xOffset);
           maxHeight = Math.max(maxHeight, charHeight);
-          maxYOffset = Math.max(maxYOffset, cyoffset);
-          minYOffset = Math.min(minYOffset, cyoffset);
 
           prevChar = charInfo.id;
         }
 
-        const xRange = Math.abs(firstXOffset * gsf - lastXOffset * gsf);
-        const yRange = Math.abs(maxYOffset - minYOffset);
+        const bgWidth = maxWidth + padding[0] * 2 * gsf;
+        const bgHeight = maxHeight + padding[1] * 2 * gsf;
 
-        // Final background width/height in screen pixels
-        const bgWidth = maxWidth + padding[0] * 2 * gsf + xRange;
-        const bgHeight = maxHeight + padding[1] * 2 * gsf + yRange;
-
-        // Position after offset
         const bx = containerPoint.x + pixelOffset[0];
         const by = containerPoint.y + pixelOffset[1];
 
-        // Check if click is within bounding box
         const clickX = e.containerPoint.x;
         const clickY = e.containerPoint.y;
 
+        // Check if click is within bounding box (top-left anchored)
         if (
           clickX >= bx &&
           clickX <= bx + bgWidth &&
-          clickY >= by - bgHeight &&
-          clickY <= by
+          clickY >= by &&
+          clickY <= by + bgHeight
         ) {
+          // Fire a custom event with the feature data
+          // Ensure 'click' is a known event handler in the instance
           const result = instance.click(e, f);
           return result !== undefined ? result : true;
         }
@@ -1354,8 +1332,7 @@ class LabeledIconPoints extends IconPoints {
         ? instance.settings.data
         : instance.settings.data!.features;
 
-      const { hoveringFeatures } = instance;
-      const oldHoveredFeatures = hoveringFeatures.slice();
+      const oldHoveredFeatures = instance.hoveringFeatures.slice();
       instance.hoveringFeatures = [];
 
       const gsf = instance.labelSettings.globalScaleFactor ?? 0.6;
@@ -1374,54 +1351,39 @@ class LabeledIconPoints extends IconPoints {
         const pixelOffset = instance.getLabelOffset(f);
         const padding = instance.getLabelBackgroundPadding(f);
 
-        // Compute text bounding box (same as above)
+        // Compute text bounding box
         let xOffset = padding[0] * gsf;
         let maxWidth = 0;
         let maxHeight = 0;
-        let maxYOffset = 0;
-        let minYOffset = 0;
         let prevChar: number | null = null;
 
         const chars: any[] = instance.fontAtlas.chars;
         const kernings: any[] = instance.fontAtlas.kernings;
-
-        let firstXOffset = 0;
-        let lastXOffset = 0;
 
         for (let cIndex = 0; cIndex < text.length; cIndex++) {
           const char = text[cIndex];
           const charInfo = chars.find((c: any) => c.char === char);
           if (!charInfo) continue;
 
-          if (cIndex === 0) firstXOffset = charInfo.xoffset;
-          if (cIndex === text.length - 1) lastXOffset = charInfo.xoffset;
-
           if (prevChar) {
             const k = kernings.find(
               (k: any) => k.first === prevChar && k.second === charInfo.id
             );
-            if (k) xOffset += k.amount;
+            if (k) xOffset += k.amount * gsf;
           }
 
-          const charWidth = charInfo.width * gsf;
-          const charHeight = charInfo.height * gsf;
-          const cyoffset = charInfo.yoffset * gsf;
           const cxadvance = charInfo.xadvance * gsf;
+          const charHeight = charInfo.height * gsf;
 
           xOffset += cxadvance;
           maxWidth = Math.max(maxWidth, xOffset);
           maxHeight = Math.max(maxHeight, charHeight);
-          maxYOffset = Math.max(maxYOffset, cyoffset);
-          minYOffset = Math.min(minYOffset, cyoffset);
 
           prevChar = charInfo.id;
         }
 
-        const xRange = Math.abs(firstXOffset * gsf - lastXOffset * gsf);
-        const yRange = Math.abs(maxYOffset - minYOffset);
-
-        const bgWidth = maxWidth + padding[0] * 2 * gsf + xRange;
-        const bgHeight = maxHeight + padding[1] * 2 * gsf + yRange;
+        const bgWidth = maxWidth + padding[0] * 2 * gsf;
+        const bgHeight = maxHeight + padding[1] * 2 * gsf;
 
         const bx = containerPoint.x + pixelOffset[0];
         const by = containerPoint.y + pixelOffset[1];
@@ -1432,8 +1394,8 @@ class LabeledIconPoints extends IconPoints {
         if (
           hoverX >= bx &&
           hoverX <= bx + bgWidth &&
-          hoverY >= by - bgHeight &&
-          hoverY <= by
+          hoverY >= by &&
+          hoverY <= by + bgHeight
         ) {
           instance.hoveringFeatures.push(f as any);
           const result = instance.hover(e, f);
@@ -1443,7 +1405,7 @@ class LabeledIconPoints extends IconPoints {
         }
       }
 
-      // Hover off previously hovered features that are no longer hovered
+      // Unhover features that are no longer hovered
       for (const oldFeat of oldHoveredFeatures) {
         if (!instance.hoveringFeatures.includes(oldFeat)) {
           instance.hoverOff(e, oldFeat);
