@@ -1237,7 +1237,7 @@ class LabeledIconPoints extends IconPoints {
     e: LeafletMouseEvent,
     map: Map,
     instances: LabeledIconPoints[]
-  ): boolean | undefined {
+  ): any {
     for (const instance of instances) {
       if (!instance.active || instance.map !== map) continue;
 
@@ -1314,7 +1314,12 @@ class LabeledIconPoints extends IconPoints {
           const test = result !== undefined ? result : true;
           console.log(test);
           console.log(f);
-          return result !== undefined ? result : true;
+          // return result !== undefined ? result : true;
+          if (test) {
+            return f;
+          } else {
+            return undefined;
+          }
         }
       }
     }
