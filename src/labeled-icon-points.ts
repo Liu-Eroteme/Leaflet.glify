@@ -1206,17 +1206,126 @@ class LabeledIconPoints extends IconPoints {
     return this;
   }
 
-  // Add these static methods
+  // // Add these static methods
+  // static tryClick(
+  //   e: LeafletMouseEvent,
+  //   map: Map,
+  //   instances: LabeledIconPoints[]
+  // ): boolean | undefined {
+  //   // TODO implement ?
+  //   // TODO i dont know if i even implemented this in the base class
+  //   // I definitely haven't tested it yet or even gotten that far...
+  //   // Pls dont be too much work in the future :(
+  //   // INFO make sure the icon points function is working first, then just use super.tryClick() here
+  //   return undefined;
+  // }
+
+  // static tryHover(
+  //   e: LeafletMouseEvent,
+  //   map: Map,
+  //   instances: LabeledIconPoints[]
+  // ): Array<boolean | undefined> {
+  //   // TODO implement ?
+  //   // TODO i dont know if i even implemented this in the base class
+  //   // I definitely haven't tested it yet or even gotten that far...
+  //   // Pls dont be too much work in the future :(
+  //   // INFO make sure the icon points function is working first, then just use super.tryHover() here
+  //   return [];
+  // }
+
   static tryClick(
     e: LeafletMouseEvent,
     map: Map,
     instances: LabeledIconPoints[]
   ): boolean | undefined {
-    // TODO implement ?
-    // TODO i dont know if i even implemented this in the base class
-    // I definitely haven't tested it yet or even gotten that far...
-    // Pls dont be too much work in the future :(
-    // INFO make sure the icon points function is working first, then just use super.tryClick() here
+    console.log("tryClick called");
+    for (const instance of instances) {
+      if (!instance.active || instance.map !== map) continue;
+
+      const features = Array.isArray(instance.settings.data)
+        ? instance.settings.data
+        : instance.settings.data!.features;
+
+      const scale = Math.pow(2, map.getZoom());
+      const gsf = instance.labelSettings.globalScaleFactor ?? 0.6;
+
+      for (let i = 0; i < features.length; i++) {
+        const f = features[i];
+        const iconVertex = instance.allLatLngLookup[i];
+        if (!iconVertex) continue;
+
+        const latLng = iconVertex.latLng;
+        const layerPoint = map.latLngToLayerPoint(latLng);
+
+        const text = instance.getLabelText(f, i);
+        if (!text) continue;
+
+        const pixelOffset = instance.getLabelOffset(f);
+        const padding = instance.getLabelBackgroundPadding(f);
+
+        // Compute text metrics (similar to updateLabelInstanceData but minimal)
+        let xOffset = padding[0] * gsf;
+        let maxWidth = 0;
+        let maxHeight = 0;
+        let maxYOffset = 0;
+        let minYOffset = 0;
+        let prevChar: number | null = null;
+
+        const chars: any[] = instance.fontAtlas.chars;
+        const kernings: any[] = instance.fontAtlas.kernings;
+
+        let firstXOffset = 0;
+        let lastXOffset = 0;
+        for (let cIndex = 0; cIndex < text.length; cIndex++) {
+          const char = text[cIndex];
+          const charInfo = chars.find((c: any) => c.char === char);
+          if (!charInfo) continue;
+          if (cIndex === 0) firstXOffset = charInfo.xoffset;
+          if (cIndex === text.length - 1) lastXOffset = charInfo.xoffset;
+          if (prevChar) {
+            const k = kernings.find(
+              (k: any) => k.first === prevChar && k.second === charInfo.id
+            );
+            if (k) xOffset += k.amount;
+          }
+          xOffset += charInfo.xadvance;
+          maxWidth = Math.max(maxWidth, xOffset);
+          maxHeight = Math.max(maxHeight, charInfo.height);
+          maxYOffset = Math.max(maxYOffset, charInfo.yoffset);
+          minYOffset = Math.min(minYOffset, charInfo.yoffset);
+          prevChar = charInfo.id;
+        }
+
+        const xRange = Math.abs(firstXOffset - lastXOffset);
+        const yRange = Math.abs(maxYOffset - minYOffset);
+
+        // The bounding box calculation (approximate)
+        // Based on updateLabelInstanceData logic: background width/height
+        // At render time, width/height are effectively scaled by (gsf * scale)
+        // We add double padding (padding[0]*2 and padding[1]*2).
+        const bgWidth = (maxWidth + padding[0] * 2 + xRange) * gsf * scale;
+        const bgHeight = (maxHeight + padding[1] * 2 + yRange) * gsf * scale;
+
+        // Position after offset
+        // layerPoint is current screen position of icon
+        const bx = layerPoint.x + pixelOffset[0];
+        const by = layerPoint.y + pixelOffset[1];
+
+        // Now check if click is within bounding box
+        const clickX = e.layerPoint.x;
+        const clickY = e.layerPoint.y;
+
+        if (
+          clickX >= bx &&
+          clickX <= bx + bgWidth &&
+          clickY >= by - bgHeight && // y offset goes upward
+          clickY <= by
+        ) {
+          const result = instance.click(e, f);
+          return result !== undefined ? result : true;
+        }
+      }
+    }
     return undefined;
   }
 
@@ -1225,12 +1334,104 @@ class LabeledIconPoints extends IconPoints {
     map: Map,
     instances: LabeledIconPoints[]
   ): Array<boolean | undefined> {
-    // TODO implement ?
-    // TODO i dont know if i even implemented this in the base class
-    // I definitely haven't tested it yet or even gotten that far...
-    // Pls dont be too much work in the future :(
-    // INFO make sure the icon points function is working first, then just use super.tryHover() here
-    return [];
+    console.log("tryHover called");
+    const results: Array<boolean | undefined> = [];
+    for (const instance of instances) {
+      if (!instance.active || instance.map !== map) continue;
+
+      const features = Array.isArray(instance.settings.data)
+        ? instance.settings.data
+        : instance.settings.data!.features;
+
+      const { hoveringFeatures } = instance;
+      const oldHoveredFeatures = hoveringFeatures.slice();
+      instance.hoveringFeatures = [];
+
+      const scale = Math.pow(2, map.getZoom());
+      const gsf = instance.labelSettings.globalScaleFactor ?? 0.6;
+
+      for (let i = 0; i < features.length; i++) {
+        const f = features[i];
+        const iconVertex = instance.allLatLngLookup[i];
+        if (!iconVertex) continue;
+
+        const latLng = iconVertex.latLng;
+        const layerPoint = map.latLngToLayerPoint(latLng);
+
+        const text = instance.getLabelText(f, i);
+        if (!text) continue;
+
+        const pixelOffset = instance.getLabelOffset(f);
+        const padding = instance.getLabelBackgroundPadding(f);
+
+        // Compute text metrics (same as tryClick)
+        let xOffset = padding[0] * gsf;
+        let maxWidth = 0;
+        let maxHeight = 0;
+        let maxYOffset = 0;
+        let minYOffset = 0;
+        let prevChar: number | null = null;
+
+        const chars: any[] = instance.fontAtlas.chars;
+        const kernings: any[] = instance.fontAtlas.kernings;
+
+        let firstXOffset = 0;
+        let lastXOffset = 0;
+        for (let cIndex = 0; cIndex < text.length; cIndex++) {
+          const char = text[cIndex];
+          const charInfo = chars.find((c: any) => c.char === char);
+          if (!charInfo) continue;
+          if (cIndex === 0) firstXOffset = charInfo.xoffset;
+          if (cIndex === text.length - 1) lastXOffset = charInfo.xoffset;
+          if (prevChar) {
+            const k = kernings.find(
+              (k: any) => k.first === prevChar && k.second === charInfo.id
+            );
+            if (k) xOffset += k.amount;
+          }
+          xOffset += charInfo.xadvance;
+          maxWidth = Math.max(maxWidth, xOffset);
+          maxHeight = Math.max(maxHeight, charInfo.height);
+          maxYOffset = Math.max(maxYOffset, charInfo.yoffset);
+          minYOffset = Math.min(minYOffset, charInfo.yoffset);
+          prevChar = charInfo.id;
+        }
+
+        const xRange = Math.abs(firstXOffset - lastXOffset);
+        const yRange = Math.abs(maxYOffset - minYOffset);
+
+        const bgWidth = (maxWidth + padding[0] * 2 + xRange) * gsf * scale;
+        const bgHeight = (maxHeight + padding[1] * 2 + yRange) * gsf * scale;
+
+        const bx = layerPoint.x + pixelOffset[0];
+        const by = layerPoint.y + pixelOffset[1];
+
+        const hoverX = e.layerPoint.x;
+        const hoverY = e.layerPoint.y;
+
+        if (
+          hoverX >= bx &&
+          hoverX <= bx + bgWidth &&
+          hoverY >= by - bgHeight &&
+          hoverY <= by
+        ) {
+          // Hovering this label
+          instance.hoveringFeatures.push(f as any);
+          const result = instance.hover(e, f);
+          if (result !== undefined) {
+            results.push(result);
+          }
+        }
+      }
+
+      // Check if any previously hovered features are no longer hovered
+      for (const oldFeat of oldHoveredFeatures) {
+        if (!instance.hoveringFeatures.includes(oldFeat)) {
+          instance.hoverOff(e, oldFeat);
+        }
+      }
+    }
+    return results;
   }
 }
 
