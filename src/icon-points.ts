@@ -391,7 +391,7 @@ export class IconPoints extends BaseGlLayer<IIconPointsSettings> {
     // console.log("Defined processVertex function");
 
     if (this.dataFormat === "Array") {
-      console.log("Processing Array data");
+      // console.log("Processing Array data");
       // console.log("Processing Array data");
       const max = data.length;
       // console.log(`Data length: ${max}`);

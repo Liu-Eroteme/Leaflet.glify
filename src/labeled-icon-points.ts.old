@@ -856,7 +856,7 @@ class LabeledIconPoints extends IconPoints {
     console.log("Number of features:", features.length);
 
     features.forEach((feature, index) => {
-      console.log(`Processing feature ${index}:`, feature);
+      // console.log(`Processing feature ${index}:`, feature);
 
       console.log("calling getLabelText with index:", index);
       const text = this.getLabelText(
@@ -916,7 +916,7 @@ class LabeledIconPoints extends IconPoints {
       // char loop
       for (let i = 0; i < text.length; i++) {
         const char = text[i];
-        console.log(`Processing character: ${char}`);
+        // console.log(`Processing character: ${char}`);
 
         // TODO change any type
         const charInfo = this.fontAtlas.chars.find((c: any) => c.char === char);
