@@ -1320,9 +1320,7 @@ class LabeledIconPoints extends IconPoints {
           //   console.log("a");
           //   return undefined;
           // }
-
-          console.log("CLICKED");
-          console.log(f);
+          return f;
         }
       }
     }
