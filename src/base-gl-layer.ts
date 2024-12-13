@@ -467,7 +467,9 @@ export abstract class BaseGlLayer<
   click(e: LeafletMouseEvent, feature: any): boolean | undefined {
     if (!this.settings.click) return;
     const result = this.settings.click(e, feature);
-    if (result !== undefined) {
+    if (feature !== undefined) {
+      return feature;
+    } else if (result !== undefined) {
       return result;
     }
   }

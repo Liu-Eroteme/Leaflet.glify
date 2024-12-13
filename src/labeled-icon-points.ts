@@ -1308,18 +1308,6 @@ class LabeledIconPoints extends IconPoints {
           clickY >= by &&
           clickY <= by + bgHeight
         ) {
-          // Fire a custom event with the feature data
-          // Ensure 'click' is a known event handler in the instance
-          // const result = instance.click(e, f);
-          // const test = result !== undefined ? result : true;
-          // return result !== undefined ? result : true;
-          // if (test) {
-          //   console.log("a");
-          //   return f;
-          // } else {
-          //   console.log("a");
-          //   return undefined;
-          // }
           return instance.click(e, f);
         }
       }
