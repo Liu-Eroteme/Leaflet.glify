@@ -1312,12 +1312,12 @@ class LabeledIconPoints extends IconPoints {
           // Ensure 'click' is a known event handler in the instance
           const result = instance.click(e, f);
           const test = result !== undefined ? result : true;
-          console.log(test);
-          console.log(f);
           // return result !== undefined ? result : true;
           if (test) {
+            console.log("a");
             return f;
           } else {
+            console.log("a");
             return undefined;
           }
         }
