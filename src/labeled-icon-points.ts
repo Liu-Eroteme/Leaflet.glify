@@ -861,7 +861,7 @@ class LabeledIconPoints extends IconPoints {
       // console.log("Label text:", text);
       // console.log("get latlong");
 
-      // INFO THIS IS DUMB!
+      // INFO THIS IS DUMB! /comment by future liu: you coulda said why past liu...
       const rawLatLng = this.allLatLngLookup[index].latLng;
 
       // console.log("gotten");
@@ -921,6 +921,15 @@ class LabeledIconPoints extends IconPoints {
         const char = text[i];
         // console.log(`Processing character: ${char}`);
 
+        // Bodge in handling for spaces
+        if (char === " ") {
+          const spaceAdvance = 12;
+          if (i === 0) firstXOffset = 0;
+          else if (i === text.length - 1) lastXOffset = 0;
+          xOffset += spaceAdvance;
+          continue;
+        }
+
         // TODO change any type
         const charInfo = this.fontAtlas.chars.find((c: any) => c.char === char);
 
@@ -930,7 +939,6 @@ class LabeledIconPoints extends IconPoints {
           lastXOffset = charInfo.xoffset;
         }
 
-        // TODO add " " space handling
         if (!charInfo) {
           // console.log(`No char info for: ${char}, skipping`);
           continue;
