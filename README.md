@@ -1,16 +1,18 @@
-# Goals of this fork:
+# ~Goals of this fork:~
 
-- update function performance optimization
-- fix drag, zoom, move during continuous update
-- type declarations
-- react & react-leaflet compatability
-- animations
-- icon markers
-- floating labels for icon markers
-- hover states
-- etc
+- ~update function performance optimization~
+- ~fix drag, zoom, move during continuous update~
+- ~type declarations~
+- ~react & react-leaflet compatability~
+- ~animations~
+- ~icon markers~
+- ~floating labels for icon markers~
+- ~hover states~
+- ~etc~
 
-short: high performance dynamic map overlay
+~short: high performance dynamic map overlay~
+
+**Update: I rewrote this from scratch with dynamic multithreading and zero-copy data handling .. will publish that version after some cleaning. You can consider this fork abandoned.**
 
 
 # Leaflet.glify ![Leaflet.glify logo](logo.svg)
